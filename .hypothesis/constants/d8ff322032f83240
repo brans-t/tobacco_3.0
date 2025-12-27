@@ -1,4 +1,0 @@
-# file: C:\Users\admin\AppData\Roaming\Python\Python313\site-packages\networkx\linalg\graphmatrix.py
-# hypothesis_version: 6.148.8
-
-['adjacency_matrix', 'csc', 'incidence_matrix', 'weight']

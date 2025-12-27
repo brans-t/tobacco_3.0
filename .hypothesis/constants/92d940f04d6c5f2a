@@ -1,4 +1,0 @@
-# file: \\wsl.localhost\Ubuntu\home\linot\MOF_create\Synthesis_MOF\tobacco_3.0\src\core\scale.py
-# hypothesis_version: 6.148.8
-
-[-10.0, 0.0001, 0.05, 1.0, 10.0, 160, 180, 'L-BFGS-B', 'disp', 'is not implemented', 'none', 'optimization method', 'randtobest1bin']

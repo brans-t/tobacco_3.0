@@ -51,9 +51,6 @@ Complete user manual covering:
 - Theoretical background
 - Advanced usage
 
-#### [tobacco_3.0_manual.docx](tobacco_3.0_manual.docx)
-Editable version of the manual
-
 ## Quick Links
 
 ### Getting Started
@@ -115,8 +112,7 @@ Editable version of the manual
 
 ## Language Support
 
-- **English**: All documentation available in English
-- **中文**: Configuration guide available in Chinese ([CONFIGURATION.md](CONFIGURATION.md#中文版本))
+All documentation is available in English.
 
 ## Additional Resources
 

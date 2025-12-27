@@ -1,4 +1,0 @@
-# file: C:\Users\admin\AppData\Roaming\Python\Python313\site-packages\matplotlib\tri\__init__.py
-# hypothesis_version: 6.148.8
-
-['CubicTriInterpolator', 'TriAnalyzer', 'TriContourSet', 'TriFinder', 'TriInterpolator', 'TriRefiner', 'Triangulation', 'UniformTriRefiner', 'tricontour', 'tricontourf', 'tripcolor', 'triplot']

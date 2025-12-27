@@ -25,7 +25,7 @@ This document provides a complete guide to ToBaCCo's documentation structure.
 |------|---------|----------|
 | `docs/README.md` | Documentation index | English |
 | `docs/INSTALLATION.md` | Installation guide | English |
-| `docs/CONFIGURATION.md` | Configuration guide | English + 中文 |
+| `docs/CONFIGURATION.md` | Configuration guide | English |
 | `docs/API_DOCUMENTATION.md` | API reference | English |
 | `docs/MIGRATION_GUIDE.md` | Migration guide | English |
 | `docs/tobacco_3.0_manual.pdf` | Complete user manual | English |
@@ -176,11 +176,7 @@ This document provides a complete guide to ToBaCCo's documentation structure.
 
 ## 🌐 Language Support
 
-### English Documentation
 All documentation is available in English.
-
-### Chinese Documentation (中文文档)
-- [docs/CONFIGURATION.md](docs/CONFIGURATION.md#中文版本) - Configuration guide in Chinese
 
 ## 🔧 Troubleshooting Documentation
 

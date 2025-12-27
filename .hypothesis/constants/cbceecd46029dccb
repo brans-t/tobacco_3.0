@@ -1,4 +1,0 @@
-# file: \\wsl.localhost\Ubuntu\home\linot\MOF_create\Synthesis_MOF\tobacco_3.0\src\utils\write_cifs.py
-# hypothesis_version: 6.148.8
-
-[-0.5, 0.0, 0.5, 1.0, 2.0, 100.0, 180.0, '  x,y,z', '%.10f', '%.3f', '%Y-%m-%d', '.', '.cif', '0.00000', '1.00', '1_', '555', 'Angstroms', 'C', 'S', 'Uiso', 'X', '[0-9]', '[^0-9]', '[^a-zA-Z]', '_atom_site_charge', '_atom_site_fract_x', '_atom_site_fract_y', '_atom_site_fract_z', '_atom_site_label', '_ccdc_geom_bond_type', '_cell_angle_alpha', '_cell_angle_alpha   ', '_cell_angle_beta', '_cell_angle_beta   ', '_cell_angle_gamma', '_cell_angle_gamma   ', '_cell_length_a', '_cell_length_a   ', '_cell_length_b', '_cell_length_b   ', '_cell_length_c', '_cell_length_c   ', '_geom_bond_distance', 'bbcode', 'bbtype', 'coords', 'data_', 'edge', 'isX', 'is_new_XX', 'larch', 'length', 'loop_', 'nconnect', 'no.3', 'order', 'r', 'sym', 'the', 'ty', 'w']
