@@ -2,6 +2,7 @@ import numpy as np
 import re
 import math
 from random import choice
+from src.utils.charge_generator import generate_charge_adjustment
 
 metals = ['Mg', 'Al', 'Ca', 'Ti', 'V' , 'Cr', 'Mn', 'Fe', 'Co', 'Ni', 'Cu', 'Zn', 'Ga', 'Sr', 'Y' , 'Zr', 'Nb', 'Mo',
 		  'Tc', 'Ru', 'Rh', 'Pd', 'Ag', 'Cd', 'In', 'Ba', 'Hf', 'Ta', 'W' , 'Re', 'Os', 'Ir', 'Pt', 'Au', 'Hg', 'Tl', 
@@ -20,8 +21,26 @@ def round_half_down(n, decimals=0):
 
 	return math.ceil(n*multiplier - 0.5) / multiplier
 
-def fix_charges(placed_all):
-
+def fix_charges(placed_all, rng=None):
+	"""
+	Fix atomic charges to maintain charge neutrality.
+	
+	This function adjusts atomic charges to approach charge neutrality while
+	preserving metal and functional group charges. Uses seeded random number
+	generator for deterministic rounding.
+	
+	Args:
+		placed_all: Array of placed atoms with charges
+		rng: Seeded random number generator (random.Random instance).
+		     If None, uses non-deterministic choice() for backward compatibility.
+	
+	Returns:
+		tuple: (fc_placed_all, nnet_charge, net_charge, rcb)
+			- fc_placed_all: Charge-adjusted atom list
+			- nnet_charge: New net charge after adjustment
+			- net_charge: Original net charge
+			- rcb: Charge adjustment per atom
+	"""
 	placed_all = np.asarray(placed_all)
 	net_charge = np.sum([float(i) for i in placed_all[:,4]])
 	
@@ -59,8 +78,12 @@ def fix_charges(placed_all):
 			fc_placed_all_append([e,x,y,z,nc,oe,i,bbtype])
 
 	for l in fc_placed_all:
-
-		mode = choice(['up','down'])
+		# Use seeded RNG if provided, otherwise use non-deterministic choice
+		if rng is not None:
+			mode = rng.choice(['up','down'])
+		else:
+			mode = choice(['up','down'])
+		
 		if mode == 'down':
 			l[4] = round_half_down(l[4], 4)
 		else:

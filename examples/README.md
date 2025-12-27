@@ -15,7 +15,7 @@ python examples/quick_start.py
 This script demonstrates the **3-step process**:
 1. Choose components (template, node, edge)
 2. Generate the structure
-3. Save the output
+3. View the results
 
 **Example output:**
 ```
@@ -24,9 +24,58 @@ Node:     12c_Ce_1_Ch
 Edge:     1B_1TrU
 
 ✓ Success!
-   Generated: acsh_12c_Ce_1_Ch_1B_1TrU.cif
-   Saved to:  output/cifs/acsh_12c_Ce_1_Ch_1B_1TrU.cif
+   Generated: acsh_v1-12c_Ce_1_Ch_1-1B_1TrU.cif
+   Saved to:  output/cifs/acsh_v1-12c_Ce_1_Ch_1-1B_1TrU.cif
 ```
+
+---
+
+## New Examples (ToBaCCo 3.0 Refactored)
+
+### Single Input Example: `single_input_example.py`
+
+Demonstrates basic MOF generation with all three return formats:
+
+```bash
+python examples/single_input_example.py
+```
+
+**Features:**
+- File format (save to disk)
+- String format (in-memory processing)
+- JSON format (structured data with metadata)
+- Custom configuration
+- Input flexibility (.cif extensions optional)
+
+### Multiple Input Example: `multiple_input_example.py`
+
+Shows batch MOF generation with multiple inputs:
+
+```bash
+python examples/multiple_input_example.py
+```
+
+**Features:**
+- Multiple nodes, edges, or templates
+- Combinatorial generation
+- Batch processing with `generate_multiple_mofs()`
+- Vertex-specific node assignment
+- Large-scale generation
+
+### Deterministic Charge Example: `deterministic_charge_example.py`
+
+Demonstrates reproducible charge generation:
+
+```bash
+python examples/deterministic_charge_example.py
+```
+
+**Features:**
+- Same seed → identical charges
+- Different seeds → different charges
+- Reproducible research workflows
+- Charge neutrality verification
+- Seed traceability in metadata
 
 ---
 
@@ -74,10 +123,26 @@ Batch generation of multiple MOF structures.
 
 ## Understanding the Components
 
+### Input Directory Structure (New in 3.0)
+
+Components are now organized in the `inputs/` directory:
+
+```
+inputs/
+├── templates/    # Topology templates
+├── nodes/        # Node building blocks
+└── edges/        # Edge linkers
+```
+
+The system automatically searches:
+1. `inputs/` directory first
+2. JSON databases in `data/` as fallback
+3. Legacy root directories for backward compatibility
+
 ### Templates (Topologies)
 Templates define the **network topology** of the MOF structure.
 
-**Location:** `data/template_database.json`
+**Location:** `inputs/templates/` or `data/template_database.json`
 
 **Common examples:**
 - `pcu` - Primitive cubic
@@ -97,7 +162,7 @@ with open('data/template_database.json', 'r') as f:
 ### Nodes (Building Blocks)
 Nodes are the **metal centers or organic vertices** in the MOF.
 
-**Location:** `data/nodes_database.json`
+**Location:** `inputs/nodes/` or `data/nodes_database.json`
 
 **Naming convention:** `{coordination}c_{metal}_{number}_{type}.cif`
 - `12c_Ce_1_Ch` - 12-coordinate Cerium node
@@ -115,7 +180,7 @@ with open('data/nodes_database.json', 'r') as f:
 ### Edges (Linkers)
 Edges are the **organic linkers** connecting nodes.
 
-**Location:** `data/edges_database.json`
+**Location:** `inputs/edges/` or `data/edges_database.json`
 
 **Common examples:**
 - `1B_1TrU` - Benzene-based linker
@@ -134,29 +199,112 @@ with open('data/edges_database.json', 'r') as f:
 
 ## Code Examples
 
-### Example 1: Basic Generation
+### Example 1: Basic Generation (New API)
 
 ```python
-from src import generate_cif
+from src.api import generate_cif
 
-# Generate a MOF structure
+# Generate a MOF structure (single string inputs now supported!)
 result = generate_cif(
     template_name="acsh",
-    node_names=["12c_Ce_1_Ch"],
-    edge_names=["1B_1TrU"]
+    node_names="12c_Ce_1_Ch",  # Single string (new!)
+    edge_names="1B_1TrU"       # Single string (new!)
 )
 
-# Save to file
-with open(f"output/{result['cifname']}", 'w') as f:
-    f.write(result['cif_content'])
-
+# File is automatically saved to output/cifs/
 print(f"Generated: {result['cifname']}")
+print(f"Saved to: {result['file_path']}")
 ```
 
-### Example 2: With Custom Configuration
+### Example 2: Return as String (New Feature)
 
 ```python
-from src import generate_cif
+from src.api import generate_cif
+
+# Get CIF content as string instead of file
+cif_string = generate_cif(
+    template_name="pcu",
+    node_names="6c_Cu_1_Ch",
+    edge_names="btc_edge",
+    return_format='string'  # New parameter!
+)
+
+# Process in memory
+print(f"CIF content: {len(cif_string)} characters")
+```
+
+### Example 3: Return as JSON (New Feature)
+
+```python
+from src.api import generate_cif
+
+# Get structured JSON with metadata
+json_result = generate_cif(
+    template_name="pcu",
+    node_names="6c_Cu_1_Ch",
+    edge_names="btc_edge",
+    return_format='json'  # New parameter!
+)
+
+# Access structured data
+mof_name = list(json_result.keys())[0]
+metadata = json_result[mof_name]['metadata']
+print(f"Atoms: {metadata['num_atoms']}")
+```
+
+### Example 4: Deterministic Charges (New Feature)
+
+```python
+from src.api import generate_cif
+
+# Generate with specific random seed for reproducibility
+result = generate_cif(
+    template_name="pcu",
+    node_names="6c_Cu_1_Ch",
+    edge_names="btc_edge",
+    random_seed=42  # New parameter!
+)
+
+# Same seed always produces same charges
+print(f"Seed used: {result['metadata']['random_seed']}")
+```
+
+### Example 5: Multiple Inputs (Enhanced)
+
+```python
+from src.api import generate_cif
+
+# Generate multiple MOFs with lists
+results = generate_cif(
+    template_name=["pcu", "dia"],  # Multiple templates
+    node_names=["6c_Cu_1_Ch", "6c_Zn_1_Ch"],  # Multiple nodes
+    edge_names="btc_edge"
+)
+
+# Results is a list of MOFs
+print(f"Generated {len(results)} MOFs")
+```
+
+### Example 6: Batch Generation (New Function)
+
+```python
+from src.api import generate_multiple_mofs
+
+# Define combinations
+combinations = [
+    {'template': 'pcu', 'nodes': '6c_Cu_1_Ch', 'edges': 'btc_edge'},
+    {'template': 'dia', 'nodes': '4c_Zn_1_Ch', 'edges': 'bdc_edge'}
+]
+
+# Generate all at once
+results = generate_multiple_mofs(combinations)
+print(f"Generated {len(results)} MOFs")
+```
+
+### Example 7: With Custom Configuration
+
+```python
+from src.api import generate_cif
 
 # Custom configuration
 config = {
@@ -168,54 +316,34 @@ config = {
 
 result = generate_cif(
     template_name="pcu",
-    node_names=["6c_Cu_1_Ch"],
-    edge_names=["btc_edge"],
+    node_names="6c_Cu_1_Ch",
+    edge_names="btc_edge",
     config=config
 )
 ```
 
-### Example 3: Multiple Edge Types
+### Example 8: Vertex-Specific Node Assignment
 
 ```python
-from src import generate_cif
-
-# Use multiple edge types (combinatorial)
-config = {"COMBINATORIAL_EDGE_ASSIGNMENT": True}
-
-results = generate_cif(
-    template_name="pcu",
-    node_names=["6c_Cu_1_Ch"],
-    edge_names=["btc_edge", "bdc_edge"],
-    config=config
-)
-
-# Results is a list of structures
-for i, result in enumerate(results):
-    print(f"Structure {i+1}: {result['cifname']}")
-```
-
-### Example 4: Vertex-Specific Node Assignment
-
-```python
-from src import generate_cif
+from src.api import generate_cif
 
 # Assign specific nodes to specific vertex types
 result = generate_cif(
     template_name="pcu",
     node_names={"V": "6c_Cu_1_Ch"},  # Dictionary mapping
-    edge_names=["btc_edge"]
+    edge_names="btc_edge"
 )
 ```
 
-### Example 5: Access Metadata
+### Example 9: Access Metadata
 
 ```python
-from src import generate_cif
+from src.api import generate_cif
 
 result = generate_cif(
     template_name="acsh",
-    node_names=["12c_Ce_1_Ch"],
-    edge_names=["1B_1TrU"]
+    node_names="12c_Ce_1_Ch",
+    edge_names="1B_1TrU"
 )
 
 # Access metadata
@@ -223,7 +351,39 @@ metadata = result['metadata']
 print(f"Generation time: {metadata['generation_time']:.2f}s")
 print(f"Unit cell a: {metadata['unit_cell_params']['a']:.3f} Å")
 print(f"Number of atoms: {metadata['num_atoms']}")
+print(f"Random seed: {metadata['random_seed']}")
 ```
+
+---
+
+## New Features in ToBaCCo 3.0
+
+### 1. Flexible Input Formats
+- Single string inputs: `node_names="6c_Cu_1_Ch"`
+- List inputs: `node_names=["6c_Cu_1_Ch", "6c_Zn_1_Ch"]`
+- Dictionary inputs: `node_names={"V": "6c_Cu_1_Ch"}`
+
+### 2. Multiple Return Formats
+- `return_format='file'` - Save to disk (default)
+- `return_format='string'` - Return as string
+- `return_format='json'` - Return as JSON with metadata
+
+### 3. Deterministic Charge Generation
+- Use `random_seed` parameter for reproducibility
+- Same seed → identical charges
+- Seed recorded in metadata
+
+### 4. Organized Input Directory
+- Components in `inputs/` directory
+- Automatic fallback to JSON databases
+- Backward compatible with legacy structure
+
+### 5. Enhanced Metadata
+- Generation time
+- Random seed used
+- Unit cell parameters
+- Atom and bond counts
+- Bond check status
 
 ---
 
@@ -281,17 +441,24 @@ FileNotFoundError: Template 'acsh' not found
 ```
 
 **Solution:**
-1. Check if JSON databases exist:
+1. Check if files exist in inputs/ directory:
+   ```bash
+   ls inputs/templates/
+   ls inputs/nodes/
+   ls inputs/edges/
+   ```
+
+2. If missing, check JSON databases:
    ```bash
    ls data/*.json
    ```
 
-2. If missing, export databases:
+3. If JSON databases missing, export them:
    ```bash
    python scripts/export_databases_to_json.py
    ```
 
-3. Verify component name (case-sensitive):
+4. Verify component name (case-sensitive):
    ```python
    import json
    with open('data/template_database.json', 'r') as f:
@@ -314,15 +481,40 @@ ValueError: Incompatible node and template
 ### Problem: Output file not created
 
 **Solution:**
-1. Check output directory exists:
-   ```python
-   from pathlib import Path
-   Path("output/cifs").mkdir(parents=True, exist_ok=True)
-   ```
-
+1. Check output directory exists (created automatically by new API)
 2. Verify `WRITE_CIF = True` in configuration
-
 3. Check for errors in console output
+
+---
+
+## Migration from Old API
+
+### Old API (Pre-3.0)
+```python
+# Old: Required lists
+result = generate_cif(
+    template_name="pcu",
+    node_names=["6c_Cu_1_Ch"],  # Required list
+    edge_names=["btc_edge"]     # Required list
+)
+
+# Old: Manual file handling
+with open(f"output/{result['cifname']}", 'w') as f:
+    f.write(result['cif_content'])
+```
+
+### New API (3.0+)
+```python
+# New: Single strings supported
+result = generate_cif(
+    template_name="pcu",
+    node_names="6c_Cu_1_Ch",  # Single string OK!
+    edge_names="btc_edge"     # Single string OK!
+)
+
+# New: File automatically saved
+print(f"Saved to: {result['file_path']}")
+```
 
 ---
 
@@ -332,17 +524,19 @@ ValueError: Incompatible node and template
 2. **Try Examples:** Run the example scripts to understand the workflow
 3. **Customize:** Modify configuration parameters for your needs
 4. **Batch Process:** Generate multiple structures programmatically
-5. **Analyze:** Use the generated CIF files in molecular simulation software
+5. **Reproducible Research:** Use random seeds for reproducible results
+6. **Analyze:** Use the generated CIF files in molecular simulation software
 
 ---
 
 ## Additional Resources
 
 - **Main Documentation:** `README.md`
+- **Migration Guide:** `docs/MIGRATION_GUIDE.md`
+- **API Documentation:** `docs/API_DOCUMENTATION.md`
 - **Configuration Guide:** `CONFIGURATION_GUIDE.md`
 - **Project Structure:** `PROJECT_STRUCTURE.md`
-- **API Documentation:** See docstrings in `src/api.py`
-- **Scripts Documentation:** `scripts/README.md`
+- **ToBaCCo Manual:** `docs/tobacco_3.0_manual.pdf`
 
 ---
 

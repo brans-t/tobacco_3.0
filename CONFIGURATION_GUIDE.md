@@ -63,7 +63,29 @@ result = generate_cif(
 
 ---
 
-### Output Control
+### Input/Output Control
+
+#### `INPUT_SOURCE`
+- **Type:** String
+- **Default:** `'auto'`
+- **Options:** `'auto'`, `'json'`, `'cif'`
+- **Description:** Source for loading building blocks
+  - `'auto'`: Try JSON database first, fallback to CIF files (recommended)
+  - `'json'`: Load only from JSON databases (faster, requires export)
+  - `'cif'`: Load only from CIF files (slower, always works)
+- **Use case:** Control loading strategy for performance or compatibility
+- **Note:** Run `python scripts/export_databases_to_json.py` to create JSON databases
+
+#### `DEFAULT_RETURN_FORMAT`
+- **Type:** String
+- **Default:** `'file'`
+- **Options:** `'file'`, `'string'`, `'json'`
+- **Description:** Default output format for API calls
+  - `'file'`: Save to file and return path (backward compatible)
+  - `'string'`: Return CIF content as string (no file I/O)
+  - `'json'`: Return as JSON object with metadata
+- **Use case:** Set preferred output format for programmatic usage
+- **Note:** Can be overridden in individual API calls
 
 #### `WRITE_CHECK_FILES`
 - **Type:** Boolean
@@ -79,11 +101,24 @@ result = generate_cif(
 - **Output location:** `output/cifs/`
 - **Use case:** Disable if you only want to test without generating files
 
+---
+
+### Charge Generation
+
 #### `CHARGES`
 - **Type:** Boolean
 - **Default:** `True`
 - **Description:** Include atomic charges in output CIF files
 - **Use case:** Disable for simpler output or when charges are not needed
+
+#### `RANDOM_SEED`
+- **Type:** Integer
+- **Default:** `42`
+- **Description:** Seed for deterministic charge generation
+- **Use case:** Ensure reproducible results across runs
+- **Example:** Set to `42` for consistent charges, or change to any integer for different random charges
+- **Note:** Same seed with same inputs produces identical charges
+- **Important:** This enables reproducible research and consistent simulation results
 
 #### `REMOVE_DUMMY_ATOMS`
 - **Type:** Boolean
@@ -243,6 +278,7 @@ WRITE_CIF = True
 CHARGES = False
 SCALING_ITERATIONS = 1
 COMBINATORIAL_EDGE_ASSIGNMENT = False
+INPUT_SOURCE = 'auto'  # Use JSON if available
 ```
 
 ### 2. High-Quality Production (Slow, Optimized)
@@ -250,9 +286,11 @@ COMBINATORIAL_EDGE_ASSIGNMENT = False
 WRITE_CHECK_FILES = False
 WRITE_CIF = True
 CHARGES = True
+RANDOM_SEED = 42  # Reproducible charges
 SCALING_ITERATIONS = 5
 BOND_TOL = 3.0
 COMBINATORIAL_EDGE_ASSIGNMENT = True
+INPUT_SOURCE = 'json'  # Faster loading
 ```
 
 ### 3. Debugging (Verbose, All Files)
@@ -262,6 +300,7 @@ WRITE_CHECK_FILES = True
 WRITE_CIF = True
 OUTPUT_SCALING_DATA = True
 IGNORE_ALL_ERRORS = False
+INPUT_SOURCE = 'cif'  # Direct file loading
 ```
 
 ### 4. Batch Processing (Robust, Continue on Errors)
@@ -270,6 +309,8 @@ IGNORE_ALL_ERRORS = True
 WRITE_CHECK_FILES = False
 WRITE_CIF = True
 RUN_PARALLEL = True
+INPUT_SOURCE = 'json'  # Faster for batch
+RANDOM_SEED = 42  # Consistent results
 ```
 
 ### 5. Exploring Structures (All Combinations)
@@ -277,6 +318,25 @@ RUN_PARALLEL = True
 ALL_NODE_COMBINATIONS = True
 COMBINATORIAL_EDGE_ASSIGNMENT = True
 SCALING_ITERATIONS = 3
+RANDOM_SEED = 42  # Reproducible exploration
+```
+
+### 6. Reproducible Research (Deterministic Results)
+```python
+RANDOM_SEED = 42  # Fixed seed
+CHARGES = True
+SCALING_ITERATIONS = 3
+COMBINATORIAL_EDGE_ASSIGNMENT = False  # Reduce randomness
+INPUT_SOURCE = 'json'  # Consistent loading
+```
+
+### 7. API Integration (Programmatic Usage)
+```python
+DEFAULT_RETURN_FORMAT = 'json'  # Structured output
+WRITE_CIF = False  # No file I/O
+CHARGES = True
+RANDOM_SEED = 42  # Reproducible
+INPUT_SOURCE = 'json'  # Fast loading
 ```
 
 ---
@@ -289,21 +349,27 @@ SCALING_ITERATIONS = 3
 CHARGES = False
 SCALING_ITERATIONS = 5
 BOND_TOL = 3.0
+RANDOM_SEED = 123  # NEW: Set custom seed
+INPUT_SOURCE = 'json'  # NEW: Use JSON databases
+DEFAULT_RETURN_FORMAT = 'string'  # NEW: Return as string
 ```
 
 ### Method 2: Override in API Call
 ```python
-from src import generate_cif
+from src.api import generate_cif
 
 result = generate_cif(
     template_name="pcu",
-    node_names=["6c_Cu_1_Ch"],
-    edge_names=["btc_edge"],
+    node_names="6c_Cu_1_Ch",
+    edge_names="btc_edge",
     config={
         "CHARGES": False,
         "SCALING_ITERATIONS": 5,
-        "BOND_TOL": 3.0
-    }
+        "BOND_TOL": 3.0,
+        "RANDOM_SEED": 123  # Override seed
+    },
+    return_format='string',  # Override return format
+    random_seed=456  # Can also override seed directly
 )
 ```
 
@@ -313,6 +379,7 @@ result = generate_cif(
 import configuration
 configuration.CHARGES = False
 configuration.SCALING_ITERATIONS = 5
+configuration.RANDOM_SEED = 42
 ```
 
 ---
@@ -337,6 +404,7 @@ configuration.SCALING_ITERATIONS = 5
 - Set `COMBINATORIAL_EDGE_ASSIGNMENT = False`
 - Set `ALL_NODE_COMBINATIONS = False`
 - Reduce `SCALING_ITERATIONS` to 1
+- Use `INPUT_SOURCE = 'json'` (requires JSON export)
 
 ### Problem: Bond detection issues
 **Solution:** Adjust `BOND_TOL` (increase for loose detection, decrease for strict)
@@ -350,6 +418,20 @@ configuration.SCALING_ITERATIONS = 5
 - Modify `PRE_SCALE`
 - Use `FIX_UC` to constrain specific parameters
 
+### Problem: Different results each time
+**Solution:** Set `RANDOM_SEED` to a fixed value (e.g., `42`) for reproducible charges
+
+### Problem: Slow file loading
+**Solution:** 
+- Export databases to JSON: `python scripts/export_databases_to_json.py`
+- Set `INPUT_SOURCE = 'json'`
+
+### Problem: Need reproducible research results
+**Solution:**
+- Set `RANDOM_SEED = 42` (or any fixed integer)
+- Document the seed value in your research
+- Use same seed for all related generations
+
 ---
 
 ## Related Files
@@ -357,7 +439,35 @@ configuration.SCALING_ITERATIONS = 5
 - `tobacco.py` - Main entry point that loads configuration
 - `src/api.py` - API that allows configuration overrides
 - `vertex_assignment.txt` - Used when `USER_SPECIFIED_NODE_ASSIGNMENT = True`
+- `docs/API_DOCUMENTATION.md` - Detailed API documentation
+- `docs/MIGRATION_GUIDE.md` - Migration guide for new features
 
 ---
 
-**Last Updated:** December 27, 2024
+## New Configuration Options Summary
+
+The refactored version adds three new configuration options:
+
+### `RANDOM_SEED` (Integer, default: 42)
+- Controls deterministic charge generation
+- Same seed produces identical charges
+- Essential for reproducible research
+- Can be overridden in API calls
+
+### `INPUT_SOURCE` (String, default: 'auto')
+- Controls how building blocks are loaded
+- Options: 'auto', 'json', 'cif'
+- 'json' is faster but requires export
+- 'auto' provides best balance
+
+### `DEFAULT_RETURN_FORMAT` (String, default: 'file')
+- Sets default output format for API
+- Options: 'file', 'string', 'json'
+- Can be overridden in API calls
+- 'file' maintains backward compatibility
+
+All original configuration options remain unchanged and work exactly as before.
+
+---
+
+**Last Updated:** December 28, 2024

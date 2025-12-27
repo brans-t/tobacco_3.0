@@ -74,8 +74,8 @@ class TestInputValidation:
     
     def test_validate_inputs_invalid_node_names_type(self):
         """Test that invalid node_names type raises ValueError."""
-        with pytest.raises(ValueError, match="node_names must be list or dict"):
-            _validate_inputs("template", "not_a_list_or_dict", ["edge1"])
+        with pytest.raises(ValueError, match="node_names must be"):
+            _validate_inputs("template", 12345, ["edge1"])
     
     def test_validate_inputs_empty_node_names_list(self):
         """Test that empty node_names list raises ValueError."""
@@ -89,8 +89,8 @@ class TestInputValidation:
     
     def test_validate_inputs_invalid_edge_names_type(self):
         """Test that invalid edge_names type raises ValueError."""
-        with pytest.raises(ValueError, match="edge_names must be a list"):
-            _validate_inputs("template", ["node1"], "not_a_list")
+        with pytest.raises(ValueError, match="edge_names must be"):
+            _validate_inputs("template", ["node1"], 12345)
     
     def test_validate_inputs_empty_edge_names_list(self):
         """Test that empty edge_names list raises ValueError."""
@@ -260,7 +260,7 @@ class TestGenerateCifErrorHandling:
     
     def test_generate_cif_invalid_template(self):
         """Test that generate_cif raises error for invalid template."""
-        with pytest.raises(FileNotFoundError):
+        with pytest.raises(ValueError, match="Input validation failed"):
             generate_cif("nonexistent_template_xyz", ["node1"], ["edge1"])
     
     def test_generate_cif_invalid_node(self):
@@ -268,7 +268,7 @@ class TestGenerateCifErrorHandling:
         # Need a valid template
         if TEMPLATES_DIR.exists() and list(TEMPLATES_DIR.glob("*.cif")):
             template = list(TEMPLATES_DIR.glob("*.cif"))[0].stem
-            with pytest.raises(FileNotFoundError):
+            with pytest.raises(ValueError, match="Input validation failed"):
                 generate_cif(template, ["nonexistent_node_xyz"], ["edge1"])
     
     def test_generate_cif_invalid_edge(self):
@@ -278,7 +278,7 @@ class TestGenerateCifErrorHandling:
             template = list(TEMPLATES_DIR.glob("*.cif"))[0].stem
             if NODES_DIR.exists() and list(NODES_DIR.glob("*.cif")):
                 node = list(NODES_DIR.glob("*.cif"))[0].stem
-                with pytest.raises(FileNotFoundError):
+                with pytest.raises(ValueError, match="Input validation failed"):
                     generate_cif(template, [node], ["nonexistent_edge_xyz"])
     
     def test_generate_cif_empty_template_name(self):

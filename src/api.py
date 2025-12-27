@@ -29,6 +29,7 @@ from src.utils.place_bbs import scaled_node_and_edge_vectors, place_nodes, place
 from src.utils.remove_net_charge import fix_charges
 from src.utils.remove_dummy_atoms import remove_Fr
 from src.utils.adjust_edges import adjust_edges
+from src.utils.charge_generator import initialize_charge_generator, generate_charge_adjustment, get_seed_from_config
 from src.utils.write_cifs import (
     write_check_cif, write_cif, bond_connected_components,
     distance_search_bond, fix_bond_sym
@@ -82,8 +83,8 @@ def _validate_inputs(template_name, node_names, edge_names):
     
     Args:
         template_name (str): Template filename
-        node_names (list or dict): Node filenames
-        edge_names (list): Edge filenames
+        node_names (str, list, or dict): Node filename(s)
+        edge_names (str or list): Edge filename(s)
         
     Raises:
         ValueError: If inputs are invalid
@@ -93,9 +94,12 @@ def _validate_inputs(template_name, node_names, edge_names):
     if not template_name or not isinstance(template_name, str):
         raise ValueError("template_name must be a non-empty string")
     
-    # Validate node_names
-    if not isinstance(node_names, (list, dict)):
-        raise ValueError(f"node_names must be list or dict, got {type(node_names)}")
+    # Validate node_names (can be str, list, or dict)
+    if not isinstance(node_names, (str, list, dict)):
+        raise ValueError(f"node_names must be str, list, or dict, got {type(node_names)}")
+    
+    if isinstance(node_names, str) and not node_names:
+        raise ValueError("node_names string cannot be empty")
     
     if isinstance(node_names, list) and len(node_names) == 0:
         raise ValueError("node_names list cannot be empty")
@@ -103,11 +107,14 @@ def _validate_inputs(template_name, node_names, edge_names):
     if isinstance(node_names, dict) and len(node_names) == 0:
         raise ValueError("node_names dict cannot be empty")
     
-    # Validate edge_names
-    if not isinstance(edge_names, list):
-        raise ValueError(f"edge_names must be a list, got {type(edge_names)}")
+    # Validate edge_names (can be str or list)
+    if not isinstance(edge_names, (str, list)):
+        raise ValueError(f"edge_names must be str or list, got {type(edge_names)}")
     
-    if len(edge_names) == 0:
+    if isinstance(edge_names, str) and not edge_names:
+        raise ValueError("edge_names string cannot be empty")
+    
+    if isinstance(edge_names, list) and len(edge_names) == 0:
         raise ValueError("edge_names list cannot be empty")
     
     # Check if template file exists
@@ -121,7 +128,9 @@ def _validate_inputs(template_name, node_names, edge_names):
     
     # Check if node files exist
     node_list = []
-    if isinstance(node_names, dict):
+    if isinstance(node_names, str):
+        node_list = [node_names]
+    elif isinstance(node_names, dict):
         node_list = list(node_names.values())
     else:
         node_list = node_names
@@ -136,7 +145,13 @@ def _validate_inputs(template_name, node_names, edge_names):
             )
     
     # Check if edge files exist
-    for edge_name in edge_names:
+    edge_list = []
+    if isinstance(edge_names, str):
+        edge_list = [edge_names]
+    else:
+        edge_list = edge_names
+    
+    for edge_name in edge_list:
         edge_filename = _normalize_filename(edge_name)
         edge_path = get_edge_path(edge_filename)
         if not edge_path.exists():
@@ -197,7 +212,8 @@ def _get_default_config():
         'MOFS_ONLY': configuration.MOFS_ONLY,
         'MERGE_CATENATED_NETS': configuration.MERGE_CATENATED_NETS,
         'RUN_PARALLEL': configuration.RUN_PARALLEL,
-        'REMOVE_DUMMY_ATOMS': configuration.REMOVE_DUMMY_ATOMS
+        'REMOVE_DUMMY_ATOMS': configuration.REMOVE_DUMMY_ATOMS,
+        'RANDOM_SEED': configuration.RANDOM_SEED
     }
 
 
@@ -206,12 +222,15 @@ def _prepare_node_files(node_names):
     Prepare node files list from input.
     
     Args:
-        node_names (list or dict): Node filenames or vertex type mapping
+        node_names (str, list, or dict): Node filename(s) or vertex type mapping
         
     Returns:
         list: List of node filenames with .cif extension
     """
-    if isinstance(node_names, dict):
+    if isinstance(node_names, str):
+        # Single string
+        return [_normalize_filename(node_names)]
+    elif isinstance(node_names, dict):
         # Dictionary mapping vertex types to node filenames
         return [_normalize_filename(name) for name in node_names.values()]
     else:
@@ -224,46 +243,68 @@ def _prepare_edge_files(edge_names):
     Prepare edge files list from input.
     
     Args:
-        edge_names (list): Edge filenames
+        edge_names (str or list): Edge filename(s)
         
     Returns:
         list: List of edge filenames with .cif extension
     """
-    return [_normalize_filename(name) for name in edge_names]
+    if isinstance(edge_names, str):
+        # Single string
+        return [_normalize_filename(edge_names)]
+    else:
+        # List of edge filenames
+        return [_normalize_filename(name) for name in edge_names]
 
 
-def generate_cif(template_name, node_names, edge_names, config=None):
+def generate_cif(template_name, node_names, edge_names, config=None, return_format='file', random_seed=None):
     """
     Generate CIF file content from template, nodes, and edges.
     
     This is the main API function for programmatic CIF generation.
     
     Args:
-        template_name (str): Template filename without .cif extension (e.g., "pcu")
-                            or with .cif extension (e.g., "pcu.cif")
-        node_names (list or dict): List of node filenames or dict mapping vertex types to filenames
-                                   Examples: ["6c_Cu_1_Ch"] or {"V": "6c_Cu_1_Ch"}
-                                   Extensions (.cif) are optional
-        edge_names (list): List of edge filenames without .cif extension (e.g., ["btc_edge"])
-                          Extensions (.cif) are optional
+        template_name (str or list): Template filename(s) without .cif extension (e.g., "pcu")
+                                     or with .cif extension (e.g., "pcu.cif")
+                                     Can be single string or list of strings
+        node_names (str, list, or dict): Node filename(s) or dict mapping vertex types to filenames
+                                        Examples: "6c_Cu_1_Ch", ["6c_Cu_1_Ch"], or {"V": "6c_Cu_1_Ch"}
+                                        Extensions (.cif) are optional
+        edge_names (str or list): Edge filename(s) without .cif extension (e.g., "btc_edge" or ["btc_edge"])
+                                 Extensions (.cif) are optional
+                                 Can be single string or list of strings
         config (dict, optional): Configuration overrides. Any key from configuration.py
                                 can be overridden here.
+        return_format (str or list, optional): Output format specification. Options:
+                                              - 'file': Save to file and return path (default)
+                                              - 'string': Return CIF content as string
+                                              - 'json': Return as JSON object
+                                              - List of formats: Return dict with results for each format
+        random_seed (int, optional): Seed for deterministic charge generation.
+                                    If None, uses default seed from configuration.
+                                    Same seed produces identical charges.
         
     Returns:
-        dict or list: Single result dict or list of dicts if multiple structures generated
-                     Each dict contains:
-                     - "cif_content" (str): The CIF file content
-                     - "cifname" (str): Generated filename
-                     - "metadata" (dict): Generation metadata (timing, parameters, etc.)
+        Depends on return_format:
+        - 'file': Path object or list of Path objects
+        - 'string': String or list of strings (or tuples with metadata)
+        - 'json': Dict with MOF names as keys
+        - List of formats: Dict mapping format names to their respective outputs
+        
+        For backward compatibility, when return_format='file' and single result,
+        returns a dict with 'file_path', 'cifname', and 'metadata' keys.
     
     Raises:
         FileNotFoundError: If template, node, or edge file not found
         ValueError: If assignments are incompatible or inputs are invalid
         
     Examples:
-        >>> result = generate_cif("pcu", ["6c_Cu_1_Ch"], ["btc_edge"])
+        >>> # Single string inputs
+        >>> result = generate_cif("pcu", "6c_Cu_1_Ch", "btc_edge")
         >>> print(result["cifname"])
         pcu_v1-6c_Cu_1_Ch_1-btc_edge.cif
+        
+        >>> # List inputs
+        >>> result = generate_cif("pcu", ["6c_Cu_1_Ch"], ["btc_edge"])
         
         >>> # With configuration override
         >>> result = generate_cif("pcu", ["6c_Cu_1_Ch"], ["btc_edge"], 
@@ -271,19 +312,89 @@ def generate_cif(template_name, node_names, edge_names, config=None):
         
         >>> # With vertex type mapping
         >>> result = generate_cif("pcu", {"V": "6c_Cu_1_Ch"}, ["btc_edge"])
+        
+        >>> # With deterministic charge generation
+        >>> result = generate_cif("pcu", ["6c_Cu_1_Ch"], ["btc_edge"], random_seed=123)
+        
+        >>> # Return as string instead of file
+        >>> result = generate_cif("pcu", "6c_Cu_1_Ch", "btc_edge", return_format='string')
+        >>> print(type(result))
+        <class 'str'>
+        
+        >>> # Return as JSON
+        >>> result = generate_cif("pcu", "6c_Cu_1_Ch", "btc_edge", return_format='json')
+        >>> print(result.keys())
+        dict_keys(['pcu_v1-6c_Cu_1_Ch_1-btc_edge'])
     """
     start_time = time.time()
     
     # Ensure output directories exist
     ensure_directories()
     
-    # Validate inputs
-    _validate_inputs(template_name, node_names, edge_names)
+    # Normalize inputs to lists (support single string inputs)
+    from src.utils.input_loader import normalize_input_format, validate_inputs
     
-    # Normalize filenames
-    template_filename = _normalize_filename(template_name)
-    node_files = _prepare_node_files(node_names)
-    edge_files = _prepare_edge_files(edge_names)
+    # Normalize template_name to list
+    if isinstance(template_name, str):
+        template_list = [template_name]
+    elif isinstance(template_name, list):
+        template_list = template_name
+    else:
+        raise ValueError(f"template_name must be str or list, got {type(template_name)}")
+    
+    # Normalize node_names (can be str, list, or dict)
+    # Keep original format for validation
+    original_node_names = node_names
+    if isinstance(node_names, str):
+        node_names = [node_names]
+    
+    # Normalize edge_names to list
+    if isinstance(edge_names, str):
+        edge_list = [edge_names]
+    elif isinstance(edge_names, list):
+        edge_list = edge_names
+    else:
+        raise ValueError(f"edge_names must be str or list, got {type(edge_names)}")
+    
+    # Validate all inputs before generation
+    for template in template_list:
+        valid, error_msg = validate_inputs(template, node_names, edge_list)
+        if not valid:
+            raise ValueError(f"Input validation failed for template '{template}': {error_msg}")
+    
+    # Initialize charge generator with seed
+    # Get seed from config if not explicitly provided
+    if random_seed is None and config is not None:
+        random_seed = get_seed_from_config(config)
+    elif random_seed is None:
+        random_seed = get_seed_from_config(None)
+    
+    rng = initialize_charge_generator(random_seed)
+    
+    # Validate return_format
+    valid_formats = {'file', 'string', 'json'}
+    if isinstance(return_format, str):
+        if return_format not in valid_formats:
+            raise ValueError(f"Invalid return_format: '{return_format}'. Must be one of {valid_formats}")
+    elif isinstance(return_format, list):
+        for fmt in return_format:
+            if fmt not in valid_formats:
+                raise ValueError(f"Invalid return_format: '{fmt}'. Must be one of {valid_formats}")
+    else:
+        raise ValueError(f"return_format must be str or list, got {type(return_format)}")
+    
+    # Store all results from all combinations
+    all_results = []
+    
+    # Generate MOFs for all template combinations
+    for template in template_list:
+        # Validate inputs for this template
+        _validate_inputs(template, original_node_names, edge_list)
+        
+        # Normalize filenames
+        template_filename = _normalize_filename(template)
+        node_files = _prepare_node_files(original_node_names)
+        edge_files = _prepare_edge_files(edge_list)
     
     # Merge configuration
     default_config = _get_default_config()
@@ -307,7 +418,7 @@ def generate_cif(template_name, node_names, edge_names, config=None):
     USER_SPECIFIED_NODE_ASSIGNMENT = merged_config['USER_SPECIFIED_NODE_ASSIGNMENT']
     COMBINATORIAL_EDGE_ASSIGNMENT = merged_config['COMBINATORIAL_EDGE_ASSIGNMENT']
     
-    # Store results (may be multiple if combinatorial)
+    # Store results for this template
     results = []
     
     # Process template
@@ -479,9 +590,9 @@ def generate_cif(template_name, node_names, edge_names, config=None):
                 
                 # Fix charges if needed
                 if CHARGES:
-                    fc_placed_all, netcharge, onetcharge, rcb = fix_charges(placed_all)
-                    # Remove net charge from random atom
-                    remove_net = choice(range(len(fc_placed_all)))
+                    fc_placed_all, netcharge, onetcharge, rcb = fix_charges(placed_all, rng)
+                    # Remove net charge from random atom using seeded RNG
+                    remove_net = generate_charge_adjustment(len(fc_placed_all), rng)
                     fc_placed_all[remove_net][4] -= np.round(netcharge, 4)
                 else:
                     fc_placed_all = placed_all
@@ -527,6 +638,7 @@ def generate_cif(template_name, node_names, edge_names, config=None):
                         "nodes": [v[1] for v in va],
                         "edges": list(ea),
                         "generation_time": generation_time,
+                        "random_seed": random_seed,
                         "unit_cell_params": {
                             "a": float(sc_a),
                             "b": float(sc_b),
@@ -542,9 +654,143 @@ def generate_cif(template_name, node_names, edge_names, config=None):
                 }
                 
                 results.append(result)
+        
+        # Add results from this template to all_results
+        all_results.extend(results)
     
-    # Return single result or list of results
-    if len(results) == 1:
-        return results[0]
+    # Format results according to return_format
+    from src.utils.output_formatter import format_results
+    
+    if return_format == 'file':
+        # For backward compatibility with 'file' format, maintain old structure
+        # but also save files using output_formatter
+        formatted = format_results(all_results, return_format='file')
+        
+        # Update results with file paths
+        for i, result in enumerate(all_results):
+            result['file_path'] = formatted[i]
+        
+        # Return single result or list of results
+        if len(all_results) == 1:
+            return all_results[0]
+        else:
+            return all_results
+    
     else:
-        return results
+        # Use output_formatter for other formats
+        formatted = format_results(all_results, return_format=return_format)
+        
+        # For single result with string format, unwrap from list
+        if return_format == 'string' and len(all_results) == 1:
+            return formatted[0]
+        
+        # For json format or multiple results, return as is
+        return formatted
+
+
+def generate_multiple_mofs(combinations, config=None, return_format='file', random_seed=None):
+    """
+    Generate multiple MOFs from list of combinations.
+    
+    This function provides a convenient way to generate multiple MOFs with
+    different template/node/edge combinations in a single call.
+    
+    Args:
+        combinations (list): List of combination dictionaries, each containing:
+                           - 'template': Template name (str or list)
+                           - 'nodes': Node name(s) (str, list, or dict)
+                           - 'edges': Edge name(s) (str or list)
+                           Example: [
+                               {'template': 'pcu', 'nodes': ['6c_Cu_1_Ch'], 'edges': ['btc_edge']},
+                               {'template': 'dia', 'nodes': ['4c_Zn_1_Ch'], 'edges': ['bdc_edge']}
+                           ]
+        config (dict, optional): Configuration overrides applied to all generations
+        return_format (str or list, optional): Output format specification:
+                                              - 'file': Save to file and return paths (default)
+                                              - 'string': Return CIF content as strings
+                                              - 'json': Return as JSON object
+                                              - List of formats: Return dict with results for each format
+        random_seed (int, optional): Seed for deterministic charge generation.
+                                    If None, uses default seed from configuration.
+                                    Same seed produces identical charges across all MOFs.
+    
+    Returns:
+        list or dict: Results for all combinations in specified format
+                     - For 'file' or 'string': List of results
+                     - For 'json': Single dict with all MOFs
+                     - For list of formats: Dict mapping format names to their outputs
+    
+    Raises:
+        ValueError: If combinations list is empty or has invalid structure
+        FileNotFoundError: If any template, node, or edge file not found
+        
+    Examples:
+        >>> combinations = [
+        ...     {'template': 'pcu', 'nodes': ['6c_Cu_1_Ch'], 'edges': ['btc_edge']},
+        ...     {'template': 'dia', 'nodes': ['4c_Zn_1_Ch'], 'edges': ['bdc_edge']}
+        ... ]
+        >>> results = generate_multiple_mofs(combinations)
+        >>> print(len(results))
+        2
+        
+        >>> # With JSON output
+        >>> results = generate_multiple_mofs(combinations, return_format='json')
+        >>> print(results.keys())
+        dict_keys(['pcu_v1-6c_Cu_1_Ch_1-btc_edge', 'dia_v1-4c_Zn_1_Ch_1-bdc_edge'])
+        
+        >>> # With deterministic charges
+        >>> results = generate_multiple_mofs(combinations, random_seed=42)
+    """
+    if not combinations:
+        raise ValueError("combinations list cannot be empty")
+    
+    if not isinstance(combinations, list):
+        raise ValueError(f"combinations must be a list, got {type(combinations)}")
+    
+    # Validate each combination
+    for i, combo in enumerate(combinations):
+        if not isinstance(combo, dict):
+            raise ValueError(f"Combination {i} must be a dict, got {type(combo)}")
+        
+        required_keys = {'template', 'nodes', 'edges'}
+        missing_keys = required_keys - set(combo.keys())
+        if missing_keys:
+            raise ValueError(f"Combination {i} missing required keys: {missing_keys}")
+    
+    # Collect all results
+    all_results = []
+    
+    # Generate MOFs for each combination
+    for combo in combinations:
+        template = combo['template']
+        nodes = combo['nodes']
+        edges = combo['edges']
+        
+        # Generate CIF(s) for this combination
+        result = generate_cif(
+            template_name=template,
+            node_names=nodes,
+            edge_names=edges,
+            config=config,
+            return_format='file',  # Always use file format internally
+            random_seed=random_seed
+        )
+        
+        # Handle single result or list of results
+        if isinstance(result, list):
+            all_results.extend(result)
+        else:
+            all_results.append(result)
+    
+    # Format results according to return_format
+    from src.utils.output_formatter import format_results
+    
+    if return_format == 'file':
+        # Return list of results with file paths
+        return all_results
+    
+    else:
+        # Use output_formatter for other formats
+        formatted = format_results(all_results, return_format=return_format)
+        return formatted
+

@@ -23,3 +23,35 @@ MOFS_ONLY = True
 MERGE_CATENATED_NETS = True
 RUN_PARALLEL = False
 REMOVE_DUMMY_ATOMS = True
+
+# ============================================================================
+# New Configuration Options (ToBaCCo 3.0 Refactoring)
+# ============================================================================
+
+# RANDOM_SEED: Seed for deterministic charge generation
+# Type: int
+# Default: 42
+# Description: Controls the random number generator used for charge assignment.
+#              Using the same seed with identical inputs will produce identical
+#              atomic charges, enabling reproducible simulation results.
+RANDOM_SEED = 42
+
+# INPUT_SOURCE: Source for loading building blocks
+# Type: str
+# Default: 'auto'
+# Options: 'json', 'cif', 'auto'
+# Description: Specifies where to load building blocks (nodes, edges, templates).
+#              - 'json': Load from JSON database files (data/*.json)
+#              - 'cif': Load from CIF files in inputs/ directories
+#              - 'auto': Try JSON first, fallback to CIF if unavailable
+INPUT_SOURCE = 'auto'
+
+# DEFAULT_RETURN_FORMAT: Default format for API return values
+# Type: str
+# Default: 'file'
+# Options: 'file', 'string', 'json'
+# Description: Controls how generated CIF content is returned from API functions.
+#              - 'file': Save to output/cifs/ directory and return file path
+#              - 'string': Return CIF content as a string
+#              - 'json': Return structured JSON with CIF content and metadata
+DEFAULT_RETURN_FORMAT = 'file'

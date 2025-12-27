@@ -1,0 +1,4 @@
+# file: C:\Users\admin\AppData\Roaming\Python\Python313\site-packages\networkx\algorithms\centrality\trophic.py
+# hypothesis_version: 6.148.8
+
+['trophic_differences', 'trophic_levels', 'undirected', 'weight']

@@ -69,8 +69,29 @@ def PBC3DF(c1, c2):
     return c2
 
 def bbelems(cifname, direc):
-
-	path = os.path.join(direc, cifname)
+	"""
+	Get elements from building block CIF file.
+	
+	Args:
+		cifname: CIF filename
+		direc: Directory type ('nodes', 'edges', or 'templates') or full path
+	
+	Returns:
+		list: List of element symbols
+	"""
+	# Import path resolution functions
+	from src.utils.paths import get_node_path, get_edge_path, get_template_path
+	
+	# Determine if direc is a directory type or a full path
+	if direc == 'nodes':
+		path = get_node_path(cifname)
+	elif direc == 'edges':
+		path = get_edge_path(cifname)
+	elif direc == 'templates':
+		path = get_template_path(cifname)
+	else:
+		# Assume it's a full path or relative path
+		path = os.path.join(direc, cifname)
 
 	with open(path, 'r') as cif:
 		cif = cif.read()
@@ -98,8 +119,29 @@ def bbelems(cifname, direc):
 	return elems
 
 def bb2array(cifname, direc):
-
-	path = os.path.join(direc, cifname)
+	"""
+	Convert building block CIF to array format.
+	
+	Args:
+		cifname: CIF filename
+		direc: Directory type ('nodes', 'edges', or 'templates') or full path
+	
+	Returns:
+		tuple: (fcoords, unit_cell) where fcoords is list of [atom_name, fractional_coords]
+	"""
+	# Import path resolution functions
+	from src.utils.paths import get_node_path, get_edge_path, get_template_path
+	
+	# Determine if direc is a directory type or a full path
+	if direc == 'nodes':
+		path = get_node_path(cifname)
+	elif direc == 'edges':
+		path = get_edge_path(cifname)
+	elif direc == 'templates':
+		path = get_template_path(cifname)
+	else:
+		# Assume it's a full path or relative path
+		path = os.path.join(direc, cifname)
 
 	with open(path, 'r') as cif:
 		cif = cif.read()
@@ -147,8 +189,29 @@ def bb2array(cifname, direc):
 	return sccoords
 
 def bbbonds(cifname, direc):
-
-	path = os.path.join(direc, cifname)
+	"""
+	Get bonds from building block CIF file.
+	
+	Args:
+		cifname: CIF filename
+		direc: Directory type ('nodes', 'edges', or 'templates') or full path
+	
+	Returns:
+		list: List of bond information
+	"""
+	# Import path resolution functions
+	from src.utils.paths import get_node_path, get_edge_path, get_template_path
+	
+	# Determine if direc is a directory type or a full path
+	if direc == 'nodes':
+		path = get_node_path(cifname)
+	elif direc == 'edges':
+		path = get_edge_path(cifname)
+	elif direc == 'templates':
+		path = get_template_path(cifname)
+	else:
+		# Assume it's a full path or relative path
+		path = os.path.join(direc, cifname)
 
 	with open(path, 'r') as cif:
 		cif = cif.read()
@@ -164,8 +227,30 @@ def bbbonds(cifname, direc):
 	return bonds
 
 def X_vecs(cifname, direc, label):
-
-	path = os.path.join(direc, cifname)
+	"""
+	Get X vectors from building block CIF file.
+	
+	Args:
+		cifname: CIF filename
+		direc: Directory type ('nodes', 'edges', or 'templates') or full path
+		label: Whether to include labels
+	
+	Returns:
+		list: List of shifted coordinate vectors
+	"""
+	# Import path resolution functions
+	from src.utils.paths import get_node_path, get_edge_path, get_template_path
+	
+	# Determine if direc is a directory type or a full path
+	if direc == 'nodes':
+		path = get_node_path(cifname)
+	elif direc == 'edges':
+		path = get_edge_path(cifname)
+	elif direc == 'templates':
+		path = get_template_path(cifname)
+	else:
+		# Assume it's a full path or relative path
+		path = os.path.join(direc, cifname)
 
 	with open(path, 'r') as cif:
 		cif = cif.read()
@@ -219,8 +304,29 @@ def X_vecs(cifname, direc, label):
 	return shifted_ccoords
 
 def bbcharges(cifname, direc):
-
-	path = os.path.join(direc, cifname)
+	"""
+	Get charges from building block CIF file.
+	
+	Args:
+		cifname: CIF filename
+		direc: Directory type ('nodes', 'edges', or 'templates') or full path
+	
+	Returns:
+		tuple: (charges, elements) lists
+	"""
+	# Import path resolution functions
+	from src.utils.paths import get_node_path, get_edge_path, get_template_path
+	
+	# Determine if direc is a directory type or a full path
+	if direc == 'nodes':
+		path = get_node_path(cifname)
+	elif direc == 'edges':
+		path = get_edge_path(cifname)
+	elif direc == 'templates':
+		path = get_template_path(cifname)
+	else:
+		# Assume it's a full path or relative path
+		path = os.path.join(direc, cifname)
 
 	with open(path, 'r') as cif:
 		cif = cif.read()
@@ -239,8 +345,29 @@ def bbcharges(cifname, direc):
 	return charges, elements
 
 def calc_edge_len(cifname, direc):
-
-	path = os.path.join(direc, cifname)
+	"""
+	Calculate edge length from CIF file.
+	
+	Args:
+		cifname: CIF filename
+		direc: Directory type ('nodes', 'edges', or 'templates') or full path
+	
+	Returns:
+		float: Edge length
+	"""
+	# Import path resolution functions
+	from src.utils.paths import get_node_path, get_edge_path, get_template_path
+	
+	# Determine if direc is a directory type or a full path
+	if direc == 'nodes':
+		path = get_node_path(cifname)
+	elif direc == 'edges':
+		path = get_edge_path(cifname)
+	elif direc == 'templates':
+		path = get_template_path(cifname)
+	else:
+		# Assume it's a full path or relative path
+		path = os.path.join(direc, cifname)
 
 	with open(path, 'r') as cif:
 		cif = cif.read()
@@ -285,8 +412,29 @@ def calc_edge_len(cifname, direc):
 	return np.linalg.norm(ccoords[0] - ccoords[1])
 
 def cncalc(cifname, direc):
-
-	path = os.path.join(direc, cifname)
+	"""
+	Calculate coordination number from CIF file.
+	
+	Args:
+		cifname: CIF filename
+		direc: Directory type ('nodes', 'edges', or 'templates') or full path
+	
+	Returns:
+		int: Coordination number (count of 'X' atoms)
+	"""
+	# Import path resolution functions
+	from src.utils.paths import get_node_path, get_edge_path, get_template_path
+	
+	# Determine if direc is a directory type or a full path
+	if direc == 'nodes':
+		path = get_node_path(cifname)
+	elif direc == 'edges':
+		path = get_edge_path(cifname)
+	elif direc == 'templates':
+		path = get_template_path(cifname)
+	else:
+		# Assume it's a full path or relative path
+		path = os.path.join(direc, cifname)
 
 	with open(path, 'r') as cif:
 		cif = cif.read()

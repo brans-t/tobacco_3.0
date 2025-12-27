@@ -1,0 +1,4 @@
+# file: \\wsl.localhost\Ubuntu\home\linot\MOF_create\Synthesis_MOF\tobacco_3.0\configuration.py
+# hypothesis_version: 6.148.8
+
+[0.1, 0.12, 0.25, 0.35, 0.4, 0.45, 0.6, 1.0, 1.54, 5.0, 'L-BFGS-B', 'auto', 'file']

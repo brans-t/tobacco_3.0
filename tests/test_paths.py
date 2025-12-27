@@ -23,6 +23,9 @@ from src.utils.paths import (
     TEMPLATES_DIR,
     NODES_DIR,
     EDGES_DIR,
+    LEGACY_TEMPLATES_DIR,
+    LEGACY_NODES_DIR,
+    LEGACY_EDGES_DIR,
     ensure_directories,
     get_template_path,
     get_node_path,
@@ -57,7 +60,7 @@ class TestPathConstants:
     
     def test_templates_dir_path(self):
         """Test that TEMPLATES_DIR is correctly defined relative to PROJECT_ROOT."""
-        assert TEMPLATES_DIR == PROJECT_ROOT / "templates"
+        assert TEMPLATES_DIR == PROJECT_ROOT / "inputs" / "templates"
 
 
 class TestPathResolutionFromDifferentDirectories:
@@ -194,12 +197,20 @@ class TestPathGetterFunctions:
     def test_get_node_path_with_extension(self):
         """Test get_node_path with .cif extension."""
         path = get_node_path("6c_Cu_1_Ch.cif")
-        assert path == NODES_DIR / "6c_Cu_1_Ch.cif"
+        # Should return path from legacy location since file exists there
+        # or new location if file doesn't exist
+        expected_new = NODES_DIR / "6c_Cu_1_Ch.cif"
+        expected_legacy = LEGACY_NODES_DIR / "6c_Cu_1_Ch.cif"
+        assert path == expected_new or path == expected_legacy
     
     def test_get_node_path_without_extension(self):
         """Test get_node_path without .cif extension."""
         path = get_node_path("6c_Cu_1_Ch")
-        assert path == NODES_DIR / "6c_Cu_1_Ch.cif"
+        # Should return path from legacy location since file exists there
+        # or new location if file doesn't exist
+        expected_new = NODES_DIR / "6c_Cu_1_Ch.cif"
+        expected_legacy = LEGACY_NODES_DIR / "6c_Cu_1_Ch.cif"
+        assert path == expected_new or path == expected_legacy
     
     def test_get_edge_path_with_extension(self):
         """Test get_edge_path with .cif extension."""

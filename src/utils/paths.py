@@ -20,10 +20,16 @@ TEMPLATE_DATABASE_DIR = DATA_DIR / "template_database"
 TEMPLATE_2D_DATABASE_DIR = DATA_DIR / "template_2D_database"
 TEMPLATE_DATABASE_OLD_DIR = DATA_DIR / "template_database_old"
 
-# Working directories (in project root for runtime use)
-TEMPLATES_DIR = PROJECT_ROOT / "templates"
-NODES_DIR = PROJECT_ROOT / "nodes"
-EDGES_DIR = PROJECT_ROOT / "edges"
+# NEW: Input directories (organized structure)
+INPUTS_DIR = PROJECT_ROOT / "inputs"
+TEMPLATES_DIR = INPUTS_DIR / "templates"
+NODES_DIR = INPUTS_DIR / "nodes"
+EDGES_DIR = INPUTS_DIR / "edges"
+
+# BACKWARD COMPATIBILITY: Legacy directories (in project root)
+LEGACY_TEMPLATES_DIR = PROJECT_ROOT / "templates"
+LEGACY_NODES_DIR = PROJECT_ROOT / "nodes"
+LEGACY_EDGES_DIR = PROJECT_ROOT / "edges"
 
 # Output directories
 OUTPUT_DIR = PROJECT_ROOT / "output"
@@ -43,14 +49,19 @@ def ensure_directories():
     """
     Create all required directories if they don't exist.
     
-    This function ensures that output directories are created automatically
-    when needed, preventing FileNotFoundError during file writing operations.
+    This function ensures that output directories and input directories are 
+    created automatically when needed, preventing FileNotFoundError during 
+    file writing operations.
     """
     directories = [
         OUTPUT_DIR,
         OUTPUT_CIFS_DIR,
         CHECK_CIFS_DIR,
-        DATA_DIR
+        DATA_DIR,
+        INPUTS_DIR,
+        TEMPLATES_DIR,
+        NODES_DIR,
+        EDGES_DIR
     ]
     
     for dir_path in directories:
@@ -61,6 +72,9 @@ def get_template_path(filename):
     """
     Get full path to template file.
     
+    Checks new inputs/ directory first, then falls back to legacy location
+    for backward compatibility.
+    
     Args:
         filename (str): Template filename (with or without .cif extension)
         
@@ -69,12 +83,27 @@ def get_template_path(filename):
     """
     if not filename.endswith('.cif'):
         filename = f"{filename}.cif"
-    return TEMPLATES_DIR / filename
+    
+    # Check new location first
+    new_path = TEMPLATES_DIR / filename
+    if new_path.exists():
+        return new_path
+    
+    # Fall back to legacy location
+    legacy_path = LEGACY_TEMPLATES_DIR / filename
+    if legacy_path.exists():
+        return legacy_path
+    
+    # Return new path even if file doesn't exist (for consistency)
+    return new_path
 
 
 def get_node_path(filename):
     """
     Get full path to node file.
+    
+    Checks new inputs/ directory first, then falls back to legacy location
+    for backward compatibility.
     
     Args:
         filename (str): Node filename (with or without .cif extension)
@@ -84,12 +113,27 @@ def get_node_path(filename):
     """
     if not filename.endswith('.cif'):
         filename = f"{filename}.cif"
-    return NODES_DIR / filename
+    
+    # Check new location first
+    new_path = NODES_DIR / filename
+    if new_path.exists():
+        return new_path
+    
+    # Fall back to legacy location
+    legacy_path = LEGACY_NODES_DIR / filename
+    if legacy_path.exists():
+        return legacy_path
+    
+    # Return new path even if file doesn't exist (for consistency)
+    return new_path
 
 
 def get_edge_path(filename):
     """
     Get full path to edge file.
+    
+    Checks new inputs/ directory first, then falls back to legacy location
+    for backward compatibility.
     
     Args:
         filename (str): Edge filename (with or without .cif extension)
@@ -99,7 +143,19 @@ def get_edge_path(filename):
     """
     if not filename.endswith('.cif'):
         filename = f"{filename}.cif"
-    return EDGES_DIR / filename
+    
+    # Check new location first
+    new_path = EDGES_DIR / filename
+    if new_path.exists():
+        return new_path
+    
+    # Fall back to legacy location
+    legacy_path = LEGACY_EDGES_DIR / filename
+    if legacy_path.exists():
+        return legacy_path
+    
+    # Return new path even if file doesn't exist (for consistency)
+    return new_path
 
 
 def get_output_cif_path(filename):

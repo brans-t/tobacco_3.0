@@ -3,12 +3,15 @@
 ToBaCCo MOF Generation Example
 
 This script demonstrates how to generate a MOF structure using ToBaCCo's API
-by selecting specific components from the JSON databases.
+by selecting specific components from the JSON databases or inputs/ directory.
 
 Example: Generate a MOF using:
-- Template: acsh (from template_database.json)
-- Node: 12c_Ce_1_Ch (from nodes_database.json)
-- Edge: 1B_1TrU (from edges_database.json)
+- Template: acsh (from inputs/templates/ or template_database.json)
+- Node: 12c_Ce_1_Ch (from inputs/nodes/ or nodes_database.json)
+- Edge: 1B_1TrU (from inputs/edges/ or edges_database.json)
+
+Note: The new API automatically searches inputs/ directory first, then falls back
+      to JSON databases if available.
 """
 
 import sys
@@ -18,7 +21,7 @@ from pathlib import Path
 # Add parent directory to path to import from src
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src import generate_cif
+from src.api import generate_cif
 
 
 def list_available_components():
@@ -127,16 +130,15 @@ def generate_mof_structure(template_name, node_name, edge_name, output_dir=None)
     print(f"   Node:     {node_name}")
     print(f"   Edge:     {edge_name}")
     
-    # Check if components exist
+    # Check if components exist (optional - API will validate)
     print(f"\n🔍 Checking component availability...")
     template_exists = check_component_exists(template_name, "template")
     node_exists = check_component_exists(node_name, "nodes")
     edge_exists = check_component_exists(edge_name, "edges")
     
     if not all([template_exists, node_exists, edge_exists]):
-        print("\n❌ Error: One or more components not found in databases")
-        print("   Run list_available_components() to see available options")
-        return None
+        print("\n⚠️  Warning: Some components not found in JSON databases")
+        print("   Will attempt to load from inputs/ directory...")
     
     # Configure generation settings
     config = {
@@ -155,17 +157,13 @@ def generate_mof_structure(template_name, node_name, edge_name, output_dir=None)
     try:
         result = generate_cif(
             template_name=template_name,
-            node_names=[node_name],
-            edge_names=[edge_name],
+            node_names=node_name,  # Single string input (new API)
+            edge_names=edge_name,  # Single string input (new API)
             config=config
         )
         
-        # Handle multiple results (if combinatorial edge assignment is enabled)
-        if isinstance(result, list):
-            print(f"\n✓ Successfully generated {len(result)} structure(s)")
-            result = result[0]  # Use first result for this example
-        else:
-            print(f"\n✓ Successfully generated structure")
+        # New API returns a single dict (not a list) for single inputs
+        print(f"\n✓ Successfully generated structure")
         
         # Display metadata
         print(f"\n📊 Structure Metadata:")
@@ -186,26 +184,15 @@ def generate_mof_structure(template_name, node_name, edge_name, output_dir=None)
         if 'num_atoms' in metadata:
             print(f"   Number of atoms:  {metadata['num_atoms']}")
         
-        # Save to file
-        if output_dir is None:
-            output_dir = Path(__file__).parent.parent / "output" / "cifs"
-        else:
-            output_dir = Path(output_dir)
-        
-        output_dir.mkdir(parents=True, exist_ok=True)
-        output_file = output_dir / result['cifname']
-        
-        with open(output_file, 'w') as f:
-            f.write(result['cif_content'])
-        
-        print(f"\n💾 Saved to: {output_file}")
-        print(f"   File size: {len(result['cif_content'])} bytes")
+        # File is automatically saved by the API
+        print(f"\n💾 Saved to: {result['file_path']}")
+        print(f"   File size: {result['file_path'].stat().st_size} bytes")
         
         return result
         
     except FileNotFoundError as e:
         print(f"\n❌ Error: File not found - {e}")
-        print("   Make sure the component files exist in the database directories")
+        print("   Make sure the component files exist in inputs/ directory or JSON databases")
         return None
     except ValueError as e:
         print(f"\n❌ Error: Invalid input - {e}")

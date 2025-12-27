@@ -6,6 +6,9 @@ This is the simplest way to generate a MOF structure using ToBaCCo.
 
 Usage:
     python examples/quick_start.py
+
+Note: This example uses the new inputs/ directory structure.
+      Input files should be in inputs/templates/, inputs/nodes/, and inputs/edges/
 """
 
 import sys
@@ -14,7 +17,7 @@ from pathlib import Path
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src import generate_cif
+from src.api import generate_cif
 
 
 # ============================================================================
@@ -27,6 +30,12 @@ print("=" * 70)
 
 # Step 1: Choose your components
 # ─────────────────────────────────────────────────────────────────────────
+# Components are loaded from the inputs/ directory:
+#   - inputs/templates/acsh.cif
+#   - inputs/nodes/12c_Ce_1_Ch.cif
+#   - inputs/edges/1B_1TrU.cif
+# Or from JSON databases in data/ directory
+
 template = "acsh"           # Topology template
 node = "12c_Ce_1_Ch"        # Node building block
 edge = "1B_1TrU"            # Edge building block
@@ -43,32 +52,35 @@ print(f"\n🔨 Generating structure...")
 
 result = generate_cif(
     template_name=template,
-    node_names=[node],
-    edge_names=[edge]
+    node_names=node,  # Single string input (new API supports this)
+    edge_names=edge   # Single string input (new API supports this)
 )
 
-# Handle multiple results (if any)
-if isinstance(result, list):
-    result = result[0]
+# The new API returns a dict with 'file_path', 'cifname', 'cif_content', and 'metadata'
+# File is automatically saved to output/cifs/ directory
 
 
-# Step 3: Save the output
+# Step 3: Display the results
 # ─────────────────────────────────────────────────────────────────────────
-output_file = Path("output") / "cifs" / result['cifname']
-output_file.parent.mkdir(parents=True, exist_ok=True)
-
-with open(output_file, 'w') as f:
-    f.write(result['cif_content'])
-
 print(f"\n✓ Success!")
 print(f"   Generated: {result['cifname']}")
-print(f"   Saved to:  {output_file}")
-print(f"   File size: {len(result['cif_content'])} bytes")
+print(f"   Saved to:  {result['file_path']}")
+print(f"   File size: {result['file_path'].stat().st_size} bytes")
 
-# Display some metadata
+# Display metadata
 metadata = result.get('metadata', {})
 if 'generation_time' in metadata:
     print(f"   Time:      {metadata['generation_time']:.2f}s")
+if 'num_atoms' in metadata:
+    print(f"   Atoms:     {metadata['num_atoms']}")
+
+# Display unit cell parameters
+if 'unit_cell_params' in metadata:
+    uc = metadata['unit_cell_params']
+    print(f"\n📐 Unit Cell:")
+    print(f"   a = {uc['a']:.3f} Å")
+    print(f"   b = {uc['b']:.3f} Å")
+    print(f"   c = {uc['c']:.3f} Å")
 
 print("\n" + "=" * 70)
 print("Done! Check the output/cifs/ directory for your MOF structure.")
