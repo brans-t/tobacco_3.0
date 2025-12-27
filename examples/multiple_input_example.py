@@ -193,17 +193,17 @@ def example_5_generate_multiple_mofs():
             'edges': ['2B_2NH2_Ch']
         },
         {
-            'template': 'pcu',
+            'template': 'pcb',
             'nodes': ['6c_Al_1'],
             'edges': ['1B_2CF3_Ch']
         },
         {
-            'template': 'pcu',
+            'template': 'pcb',
             'nodes': ['6c_Al_1'],
             'edges': ['2B_2Br_Ch']
         },
         {
-            'template': 'pcu',
+            'template': 'pcb',
             'nodes': ['6c_Al_1'],
             'edges': ['2B_2NH2_Ch']
         }
