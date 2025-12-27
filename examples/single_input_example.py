@@ -29,9 +29,9 @@ def example_1_file_format():
     
     # Generate MOF with single inputs
     result = generate_cif(
-        template_name="pcu",
-        node_names="6c_Cu_1_Ch",
-        edge_names="btc_edge",
+        template_name="pcb",
+        node_names="4c_Cd_1_Ch",
+        edge_names="1B_2CF3_Ch",
         return_format='file'  # This is the default
     )
     
@@ -74,12 +74,15 @@ def example_2_string_format():
     print("=" * 70)
     
     # Generate MOF and return as string
-    cif_string = generate_cif(
-        template_name="pcu",
-        node_names="6c_Cu_1_Ch",
-        edge_names="btc_edge",
+    result = generate_cif(
+        template_name="pcb",
+        node_names="4c_Cd_1_Ch",
+        edge_names="1B_2CF3_Ch",
         return_format='string'
     )
+    
+    # String format returns (cif_content, metadata) tuple
+    cif_string, metadata = result
     
     print(f"\n✓ MOF generated as string!")
     print(f"  Type:        {type(cif_string)}")
@@ -93,7 +96,13 @@ def example_2_string_format():
     
     print(f"\n  ... ({len(lines)} total lines)")
     
-    return cif_string
+    # Show metadata
+    print(f"\n📊 Metadata:")
+    print(f"  Template:        {metadata['template']}")
+    print(f"  Generation time: {metadata['generation_time']:.3f}s")
+    print(f"  Number of atoms: {metadata['num_atoms']}")
+    
+    return result
 
 
 def example_3_json_format():
@@ -108,9 +117,9 @@ def example_3_json_format():
     
     # Generate MOF and return as JSON
     json_result = generate_cif(
-        template_name="pcu",
-        node_names="6c_Cu_1_Ch",
-        edge_names="btc_edge",
+        template_name="pcb",
+        node_names="4c_Cd_1_Ch",
+        edge_names="1B_2CF3_Ch",
         return_format='json'
     )
     
@@ -168,9 +177,9 @@ def example_4_with_configuration():
     
     # Generate MOF with custom config
     result = generate_cif(
-        template_name="pcu",
-        node_names="6c_Cu_1_Ch",
-        edge_names="btc_edge",
+        template_name="pcb",
+        node_names="4c_Cd_1_Ch",
+        edge_names="1B_2CF3_Ch",
         config=custom_config,
         return_format='file'
     )
@@ -195,9 +204,9 @@ def example_5_with_extensions():
     # Without .cif extensions (recommended)
     print("\n📝 Without .cif extensions:")
     result1 = generate_cif(
-        template_name="pcu",
-        node_names="6c_Cu_1_Ch",
-        edge_names="btc_edge",
+        template_name="pcb",
+        node_names="4c_Cd_1_Ch",
+        edge_names="1B_2CF3_Ch",
         return_format='file'
     )
     print(f"  Generated: {result1['cifname']}")
@@ -205,9 +214,9 @@ def example_5_with_extensions():
     # With .cif extensions (also works)
     print("\n📝 With .cif extensions:")
     result2 = generate_cif(
-        template_name="pcu.cif",
-        node_names="6c_Cu_1_Ch.cif",
-        edge_names="btc_edge.cif",
+        template_name="pcb.cif",
+        node_names="4c_Cd_1_Ch.cif",
+        edge_names="1B_2CF3_Ch.cif",
         return_format='file'
     )
     print(f"  Generated: {result2['cifname']}")
@@ -244,9 +253,9 @@ def main():
     except FileNotFoundError as e:
         print(f"\n❌ Error: {e}")
         print("\nMake sure the required input files exist:")
-        print("  - inputs/templates/pcu.cif")
-        print("  - inputs/nodes/6c_Cu_1_Ch.cif")
-        print("  - inputs/edges/btc_edge.cif")
+        print("  - inputs/templates/pcb.cif")
+        print("  - inputs/nodes/4c_Cd_1_Ch.cif")
+        print("  - inputs/edges/1B_2CF3_Ch.cif")
         print("\nOr run: python scripts/export_databases_to_json.py")
         
     except Exception as e:

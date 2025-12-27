@@ -30,6 +30,93 @@ Edge:     1B_1TrU
 
 ---
 
+## Configuration Options
+
+ToBaCCo provides extensive configuration options to customize MOF generation. See `CONFIG_OPTIONS.md` for a complete guide.
+
+### Key Configuration Parameters
+
+#### Structure Generation
+- `USER_SPECIFIED_NODE_ASSIGNMENT` (bool) - Control which nodes are considered during vertex assignment
+  - `True`: Only use nodes specified in `node_names` parameter
+  - `False`: Consider all available nodes in database (default)
+  
+- `SCALING_ITERATIONS` (int) - Number of iterations for unit cell optimization (default: 1)
+  - Higher values may improve cell parameters but increase computation time
+
+#### Unit Cell Parameters
+- `MIN_CELL_LENGTH` (float) - Minimum unit cell length in Angstroms (default: 5.0)
+- `FIX_UC` (tuple) - Fix specific unit cell parameters (a, b, c, alpha, beta, gamma)
+- `PRE_SCALE` (float) - Pre-scaling factor applied before optimization (default: 1.0)
+
+#### Charge Assignment
+- `CHARGES` (bool) - Enable/disable atomic charge assignment (default: True)
+- `RANDOM_SEED` (int) - Seed for deterministic charge generation (default: 42)
+
+#### Atom and Bond Settings
+- `REMOVE_DUMMY_ATOMS` (bool) - Remove dummy atoms (Fr) from final structure (default: True)
+- `CONNECTION_SITE_BOND_LENGTH` (float) - Bond length for connection sites in Å (default: 1.54)
+- `BOND_TOL` (float) - Bond tolerance for distance-based bonding (default: 5.0)
+
+#### Optimization
+- `OPT_METHOD` (str) - Optimization method for unit cell scaling (default: 'L-BFGS-B')
+  - Options: 'L-BFGS-B', 'SLSQP', 'Powell', etc.
+
+#### Filtering
+- `SINGLE_METAL_MOFS_ONLY` (bool) - Only generate MOFs with single metal type (default: True)
+- `MOFS_ONLY` (bool) - Only generate structures containing metals (default: True)
+
+### Example: Advanced Configuration
+
+```python
+from src.api import generate_cif
+
+# Comprehensive configuration
+config = {
+    # Structure generation
+    'USER_SPECIFIED_NODE_ASSIGNMENT': True,
+    'SCALING_ITERATIONS': 3,
+    
+    # Unit cell
+    'MIN_CELL_LENGTH': 10.0,
+    'PRE_SCALE': 1.1,
+    'FIX_UC': (0, 0, 20.0, 90, 90, 90),  # Fix c=20Å and angles
+    
+    # Charges
+    'CHARGES': True,
+    'RANDOM_SEED': 42,
+    
+    # Atoms and bonds
+    'REMOVE_DUMMY_ATOMS': True,
+    'CONNECTION_SITE_BOND_LENGTH': 1.54,
+    'BOND_TOL': 3.0,
+    
+    # Optimization
+    'OPT_METHOD': 'L-BFGS-B',
+    
+    # Filtering
+    'SINGLE_METAL_MOFS_ONLY': True,
+    'MOFS_ONLY': True,
+}
+
+result = generate_cif(
+    template_name="pcu",
+    node_names="6c_Cu_1_Ch",
+    edge_names="1B_1TrU",
+    config=config
+)
+
+print(f"Generated: {result['cifname']}")
+print(f"Unit cell: {result['metadata']['unit_cell_params']}")
+```
+
+For complete documentation of all configuration options, see:
+- `CONFIG_OPTIONS.md` - Detailed configuration guide
+- `configuration.py` - All available options with defaults
+- `CONFIGURATION_GUIDE.md` - Global configuration file documentation
+
+---
+
 ## New Examples (ToBaCCo 3.0 Refactored)
 
 ### Single Input Example: `single_input_example.py`
@@ -76,6 +163,23 @@ python examples/deterministic_charge_example.py
 - Reproducible research workflows
 - Charge neutrality verification
 - Seed traceability in metadata
+
+### Advanced Configuration Example: `advanced_config_example.py`
+
+Comprehensive demonstration of configuration options:
+
+```bash
+python examples/advanced_config_example.py
+```
+
+**Features:**
+- `USER_SPECIFIED_NODE_ASSIGNMENT` - Control node selection
+- `SCALING_ITERATIONS` - Unit cell optimization
+- `CHARGES` - Charge assignment control
+- `REMOVE_DUMMY_ATOMS` - Dummy atom handling
+- `MIN_CELL_LENGTH` - Cell size constraints
+- `RANDOM_SEED` - Deterministic charge generation
+- Multiple configuration examples with comparisons
 
 ---
 
@@ -308,10 +412,13 @@ from src.api import generate_cif
 
 # Custom configuration
 config = {
-    "CHARGES": True,           # Include atomic charges
-    "SCALING_ITERATIONS": 5,   # More optimization iterations
-    "BOND_TOL": 3.0,          # Stricter bond tolerance
-    "REMOVE_DUMMY_ATOMS": True # Remove dummy atoms
+    "USER_SPECIFIED_NODE_ASSIGNMENT": False,  # Use only specified nodes (True) or all available (False)
+    "SCALING_ITERATIONS": 5,                  # More optimization iterations
+    "CHARGES": True,                          # Include atomic charges
+    "BOND_TOL": 3.0,                         # Stricter bond tolerance
+    "REMOVE_DUMMY_ATOMS": True,              # Remove dummy atoms
+    "MIN_CELL_LENGTH": 10.0,                 # Minimum unit cell length (Å)
+    "RANDOM_SEED": 42                        # Seed for reproducible charges
 }
 
 result = generate_cif(

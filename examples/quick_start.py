@@ -49,10 +49,21 @@ print(f"   Edge:     {edge}")
 # ─────────────────────────────────────────────────────────────────────────
 print(f"\n🔨 Generating structure...")
 
+# Optional: Configure generation parameters
+# You can override any configuration option from configuration.py
+config = {
+    'USER_SPECIFIED_NODE_ASSIGNMENT': False,  # Use only user-specified nodes (True) or all available nodes (False)
+    'SCALING_ITERATIONS': 1,                  # Number of scaling iterations (default: 1)
+    # 'CHARGES': True,                        # Enable/disable charge assignment
+    # 'REMOVE_DUMMY_ATOMS': True,             # Remove dummy atoms (Fr)
+    # 'MIN_CELL_LENGTH': 5.0,                 # Minimum unit cell length
+}
+
 result = generate_cif(
     template_name=template,
-    node_names=node,  # Single string input (new API supports this)
-    edge_names=edge   # Single string input (new API supports this)
+    node_names=node,    # Single string input (new API supports this)
+    edge_names=edge,    # Single string input (new API supports this)
+    config=config       # Optional: Pass configuration overrides
 )
 
 # The new API returns a dict with 'file_path', 'cifname', 'cif_content', and 'metadata'
