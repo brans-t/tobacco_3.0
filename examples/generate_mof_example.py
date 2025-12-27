@@ -274,8 +274,8 @@ def main():
     print("Example 2: Generate Single MOF Structure")
     print("─" * 70)
     result = generate_mof_structure(
-        template_name="acsh",
-        node_name="12c_Ce_1_Ch",
+        template_name="pcu",
+        node_name="6c_Cu_1_Ch",
         edge_name="1B_1TrU"
     )
     
