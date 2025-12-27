@@ -43,6 +43,14 @@ from src.utils.paths import (
 # Constants
 pi = np.pi
 
+# Vertex name mapping dictionary (for consistent naming with tobacco.py)
+vname_dict = {'V':1,'Er':2,'Ti':3,'Ce':4,'S':5,
+              'H':6,'He':7,'Li':8,'Be':9,'B':10,
+              'C':11,'N':12,'O':13,'F':14,'Ne':15,
+              'Na':16,'Mg':17,'Al':18,'Si':19,'P':20,
+              'Cl':21,'Ar':22,'K':23,'Ca':24,'Sc':25,
+              'Cr':26,'Mn':27,'Fe':28,'Co':29,'Ni':30}
+
 metal_elements = ['Ac','Ag','Al','Am','Au','Ba','Be','Bi',
                   'Bk','Ca','Cd','Ce','Cf','Cm','Co','Cr',
                   'Cs','Cu','Dy','Er','Es','Eu','Fe','Fm',
@@ -630,12 +638,17 @@ def generate_cif(template_name, node_names, edge_names, config=None, return_form
                 # Fix bond symmetry
                 fixed_bonds = fix_bond_sym(fixed_bonds, placed_all, sc_unit_cell)
                 
-                # Generate CIF filename
-                v_set = [(re.sub('[0-9]','', i[0]), i[1]) for i in va]
-                v_set = sorted(list(set(v_set)), key=lambda x: x[0])
-                vnames = '_'.join([v[0] + '-' + v[1].replace('.cif', '') for v in v_set])
+                # Generate CIF filename (consistent with tobacco.py naming)
+                # Convert vertex types to numbered format using vname_dict (v1, v2, v3, ...)
+                v_set_for_naming = [('v' + str(vname_dict.get(re.sub('[0-9]','',i[0]), re.sub('[0-9]','',i[0]))), i[1]) for i in va]
+                v_set_for_naming = sorted(list(set(v_set_for_naming)), key=lambda x: x[0])
+                v_set_for_naming = [v[0] + '-' + v[1] for v in v_set_for_naming]
                 
-                enames_list = [e.replace('.cif', '') for e in ea]
+                # Generate vnames from v_set (same as tobacco.py)
+                vnames = '_'.join([v.split('.')[0] for v in v_set_for_naming])
+                
+                # Generate enames (same as tobacco.py)
+                enames_list = [e[0:-4] if e.endswith('.cif') else e for e in ea]
                 enames_grouped = [list(edge_gr) for ind, edge_gr in itertools.groupby(enames_list)]
                 enames_grouped = [(len(edge_gr), list(set(edge_gr))) for edge_gr in enames_grouped]
                 enames_flat = [str(L) + '-' + '_'.join(names) for L, names in enames_grouped]

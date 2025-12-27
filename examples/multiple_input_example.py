@@ -173,8 +173,25 @@ def example_5_generate_multiple_mofs():
     print("Example 5: Batch Generation with generate_multiple_mofs()")
     print("=" * 70)
     
-    # Define combinations (all using 6-connected nodes for pcu template)
+    # Define combinations (using compatible node-template pairs)
+    # pcb template requires 4-connected nodes
+    # pcu template requires 6-connected nodes
     combinations = [
+        {
+            'template': 'pcb',
+            'nodes': ['4c_Cd_1_Ch'],
+            'edges': ['1B_2CF3_Ch']
+        },
+        {
+            'template': 'pcb',
+            'nodes': ['4c_Cd_1_Ch'],
+            'edges': ['2B_2Br_Ch']
+        },
+        {
+            'template': 'pcb',
+            'nodes': ['4c_Cd_1_Ch'],
+            'edges': ['2B_2NH2_Ch']
+        },
         {
             'template': 'pcu',
             'nodes': ['6c_Al_1'],
@@ -357,14 +374,14 @@ def main():
     
     # Run all examples
     try:
-        example_1_multiple_nodes()
-        example_2_multiple_edges()
-        example_3_multiple_templates()
-        example_4_combinatorial_generation()
+        # example_1_multiple_nodes()
+        # example_2_multiple_edges()
+        # example_3_multiple_templates()
+        # example_4_combinatorial_generation()
         example_5_generate_multiple_mofs()
-        example_6_json_output_multiple()
+        # example_6_json_output_multiple()
         # example_7_vertex_type_mapping()  # Skipped - requires API enhancement
-        example_8_large_batch()
+        # example_8_large_batch()
         
         print("\n" + "=" * 70)
         print(" " * 22 + "All Examples Complete!")
