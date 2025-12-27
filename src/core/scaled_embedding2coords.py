@@ -65,12 +65,22 @@ def omega2coords(start, TG, sc_omega_plus, uc_params, num_vertices, template, g,
 
 	norm_coords = sorted(norm_coords, key = lambda x : int(re.sub('[A-Za-z]','',x[0])))
 
-	path = os.path.join(str(TEMPLATES_DIR), template)
-
-	with open(path, 'r') as tcif:
-
-		tcif = tcif.read()
-		tcif = filter(None, tcif.split('\n'))
+	# Load template content from JSON database or file
+	from src.utils.input_loader import load_building_blocks
+	try:
+		blocks = load_building_blocks(template, 'template', source='auto')
+		if not template.endswith('.cif'):
+			template_key = f"{template}.cif"
+		else:
+			template_key = template
+		tcif_content = blocks[template_key]
+	except Exception:
+		# Fallback to direct file reading
+		path = os.path.join(str(TEMPLATES_DIR), template)
+		with open(path, 'r') as f:
+			tcif_content = f.read()
+	
+	tcif = filter(None, tcif_content.split('\n'))
 
 	if CHECK:
 

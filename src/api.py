@@ -79,7 +79,10 @@ def _normalize_filename(filename):
 
 def _validate_inputs(template_name, node_names, edge_names):
     """
-    Validate input parameters.
+    Validate input parameters using input_loader module.
+    
+    This function validates inputs by attempting to load them from JSON databases
+    or CIF files using the input_loader module, which provides automatic fallback.
     
     Args:
         template_name (str): Template filename
@@ -88,8 +91,10 @@ def _validate_inputs(template_name, node_names, edge_names):
         
     Raises:
         ValueError: If inputs are invalid
-        FileNotFoundError: If required files don't exist
+        FileNotFoundError: If required files don't exist in JSON database or CIF files
     """
+    from src.utils.input_loader import load_building_blocks, InputValidationError
+    
     # Validate template_name
     if not template_name or not isinstance(template_name, str):
         raise ValueError("template_name must be a non-empty string")
@@ -117,48 +122,39 @@ def _validate_inputs(template_name, node_names, edge_names):
     if isinstance(edge_names, list) and len(edge_names) == 0:
         raise ValueError("edge_names list cannot be empty")
     
-    # Check if template file exists
-    template_filename = _normalize_filename(template_name)
-    template_path = get_template_path(template_filename)
-    if not template_path.exists():
+    # Validate template exists (try loading from JSON database or CIF file)
+    try:
+        load_building_blocks(template_name, 'template', source='auto')
+    except FileNotFoundError as e:
         raise FileNotFoundError(
-            f"Template file '{template_filename}' not found. "
-            f"Searched in: {TEMPLATES_DIR}"
+            f"Template '{template_name}' not found in JSON database or inputs/templates/ directory. "
+            f"Details: {e}"
         )
+    except InputValidationError as e:
+        raise ValueError(f"Template validation error: {e}")
     
-    # Check if node files exist
-    node_list = []
-    if isinstance(node_names, str):
-        node_list = [node_names]
-    elif isinstance(node_names, dict):
-        node_list = list(node_names.values())
-    else:
-        node_list = node_names
+    # Validate nodes exist (try loading from JSON database or CIF file)
+    try:
+        load_building_blocks(node_names, 'node', source='auto')
+    except FileNotFoundError as e:
+        raise FileNotFoundError(
+            f"One or more nodes not found in JSON database or inputs/nodes/ directory. "
+            f"Details: {e}"
+        )
+    except InputValidationError as e:
+        raise ValueError(f"Node validation error: {e}")
     
-    for node_name in node_list:
-        node_filename = _normalize_filename(node_name)
-        node_path = get_node_path(node_filename)
-        if not node_path.exists():
-            raise FileNotFoundError(
-                f"Node file '{node_filename}' not found. "
-                f"Searched in: {NODES_DIR}"
-            )
-    
-    # Check if edge files exist
-    edge_list = []
-    if isinstance(edge_names, str):
-        edge_list = [edge_names]
-    else:
-        edge_list = edge_names
-    
-    for edge_name in edge_list:
-        edge_filename = _normalize_filename(edge_name)
-        edge_path = get_edge_path(edge_filename)
-        if not edge_path.exists():
-            raise FileNotFoundError(
-                f"Edge file '{edge_filename}' not found. "
-                f"Searched in: {EDGES_DIR}"
-            )
+    # Validate edges exist (try loading from JSON database or CIF file)
+    try:
+        load_building_blocks(edge_names, 'edge', source='auto')
+    except FileNotFoundError as e:
+        raise FileNotFoundError(
+            f"One or more edges not found in JSON database or inputs/edges/ directory. "
+            f"Details: {e}"
+        )
+    except InputValidationError as e:
+        raise ValueError(f"Edge validation error: {e}")
+
 
 
 def _merge_config(user_config, default_config):
@@ -428,8 +424,42 @@ def generate_cif(template_name, node_names, edge_names, config=None, return_form
         TVT = sorted(TVT, key=lambda x:x[0], reverse=True)
         TET = sorted(TET, reverse=True)
         
-        # Get node coordination numbers from nodes directory
-        node_cns = [(cncalc(node, 'nodes'), node) for node in os.listdir(NODES_DIR)]
+        # Get node coordination numbers
+        # For API usage, we should only use user-specified nodes, not all available nodes
+        from src.utils.input_loader import load_building_blocks
+        import json
+        
+        # Determine which nodes to consider
+        if USER_SPECIFIED_NODE_ASSIGNMENT or True:  # Always use user-specified nodes in API
+            # Only use the nodes specified by the user
+            user_nodes = []
+            for node_name in node_names:
+                if not node_name.endswith('.cif'):
+                    user_nodes.append(f"{node_name}.cif")
+                else:
+                    user_nodes.append(node_name)
+            node_cns = [(cncalc(node, 'nodes'), node) for node in user_nodes]
+        else:
+            # Get all available nodes (legacy behavior)
+            # Get nodes from directory
+            node_list_from_dir = []
+            if NODES_DIR.exists():
+                node_list_from_dir = [node for node in os.listdir(NODES_DIR) if node.endswith('.cif')]
+            
+            # Get nodes from JSON database
+            node_list_from_json = []
+            try:
+                from src.utils.paths import NODES_JSON
+                if NODES_JSON.exists():
+                    with open(NODES_JSON, 'r') as f:
+                        nodes_db = json.load(f)
+                        node_list_from_json = list(nodes_db.keys())
+            except Exception:
+                pass
+            
+            # Combine both sources (remove duplicates)
+            all_nodes = list(set(node_list_from_dir + node_list_from_json))
+            node_cns = [(cncalc(node, 'nodes'), node) for node in all_nodes]
         
         # Count edges by type
         edge_counts = dict((data['type'],0) for e0,e1,data in TG.edges(data=True))
@@ -617,15 +647,72 @@ def generate_cif(template_name, node_names, edge_names, config=None, return_form
                 if len(cifname) > 255:
                     cifname = cifname[0:241] + '_truncated.cif'
                 
-                # Generate CIF content by writing to file then reading it
-                # (write_cif writes to OUTPUT_CIFS_DIR)
-                write_cif(fc_placed_all, fixed_bonds, scaled_params, sc_unit_cell, cifname, CHARGES)
+                # Generate CIF content string (without writing to file yet)
+                # We'll let format_results handle the file writing
+                from io import StringIO
+                import datetime
                 
-                # Read the generated CIF file
-                from src.utils.paths import get_output_cif_path
-                cif_path = get_output_cif_path(cifname)
-                with open(cif_path, 'r') as f:
-                    cif_content = f.read()
+                sc_a, sc_b, sc_c, sc_alpha, sc_beta, sc_gamma = scaled_params
+                
+                # Build CIF content in memory
+                cif_lines = []
+                cif_lines.append('data_' + cifname[0:-4])
+                cif_lines.append('_audit_creation_date              ' + datetime.datetime.today().strftime('%Y-%m-%d'))
+                cif_lines.append("_audit_creation_method            'tobacco_3.0'")
+                cif_lines.append("_symmetry_space_group_name_H-M    'P1'")
+                cif_lines.append('_symmetry_Int_Tables_number       1')
+                cif_lines.append('_symmetry_cell_setting            triclinic')
+                cif_lines.append('loop_')
+                cif_lines.append('_symmetry_equiv_pos_as_xyz')
+                cif_lines.append('  x,y,z')
+                cif_lines.append('_cell_length_a                    ' + str(sc_a))
+                cif_lines.append('_cell_length_b                    ' + str(sc_b))
+                cif_lines.append('_cell_length_c                    ' + str(sc_c))
+                cif_lines.append('_cell_angle_alpha                 ' + str(sc_alpha))
+                cif_lines.append('_cell_angle_beta                  ' + str(sc_beta))
+                cif_lines.append('_cell_angle_gamma                 ' + str(sc_gamma))
+                cif_lines.append('loop_')
+                cif_lines.append('_atom_site_label')
+                cif_lines.append('_atom_site_type_symbol')
+                cif_lines.append('_atom_site_fract_x')
+                cif_lines.append('_atom_site_fract_y')
+                cif_lines.append('_atom_site_fract_z')
+                if CHARGES:
+                    cif_lines.append('_atom_site_charge')
+                
+                # Add atoms
+                for l in fc_placed_all:
+                    vec = list(map(float, l[1:4]))
+                    cvec = np.dot(np.linalg.inv(sc_unit_cell), vec)
+                    cvec = np.mod(cvec, 1)  # wrap coordinates to [0,1]
+                    
+                    if CHARGES:
+                        cif_lines.append('{:7} {:>4} {:>15} {:>15} {:>15} {:>15}'.format(
+                            l[0], re.sub('[0-9]','',l[0]), 
+                            "%.10f" % np.round(cvec[0],10), 
+                            "%.10f" % np.round(cvec[1],10), 
+                            "%.10f" % np.round(cvec[2],10), 
+                            l[4]))
+                    else:
+                        cif_lines.append('{:7} {:>4} {:>15} {:>15} {:>15}'.format(
+                            l[0], re.sub('[0-9]','',l[0]), 
+                            "%.10f" % np.round(cvec[0],10), 
+                            "%.10f" % np.round(cvec[1],10), 
+                            "%.10f" % np.round(cvec[2],10)))
+                
+                # Add bonds
+                cif_lines.append('loop_')
+                cif_lines.append('_geom_bond_atom_site_label_1')
+                cif_lines.append('_geom_bond_atom_site_label_2')
+                cif_lines.append('_geom_bond_distance')
+                cif_lines.append('_geom_bond_site_symmetry_2')
+                cif_lines.append('_ccdc_geom_bond_type')
+                
+                for e in fixed_bonds:
+                    cif_lines.append('{:7} {:>7} {:>5} {:>7} {:>3}'.format(
+                        e[0], e[1], "%.3f" % float(e[2]), e[3], e[4]))
+                
+                cif_content = '\n'.join(cif_lines) + '\n'
                 
                 # Create result dictionary
                 generation_time = time.time() - start_time

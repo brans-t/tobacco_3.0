@@ -73,12 +73,36 @@ def PBC3DF(c1, c2):
     return c2
 
 def ct2g(cifname):
-
-	path = os.path.join(str(TEMPLATES_DIR), cifname)
-
-	with open(path, 'r') as template:
-		template = template.read()
-		template = list(filter(None, template.split('\n')))
+	"""
+	Convert CIF template to graph.
+	
+	This function loads template data from JSON database or CIF file,
+	then converts it to a graph representation.
+	
+	Args:
+		cifname: Template filename (with or without .cif extension)
+		
+	Yields:
+		Template graph data
+	"""
+	from src.utils.input_loader import load_building_blocks
+	
+	# Normalize filename
+	if not cifname.endswith('.cif'):
+		cifname = f"{cifname}.cif"
+	
+	# Try to load from JSON database first, fallback to CIF file
+	try:
+		blocks = load_building_blocks(cifname, 'template', source='auto')
+		template_content = blocks[cifname]
+	except Exception as e:
+		# Fallback to direct file reading for backward compatibility
+		path = os.path.join(str(TEMPLATES_DIR), cifname)
+		with open(path, 'r') as f:
+			template_content = f.read()
+	
+	# Parse template content
+	template = list(filter(None, template_content.split('\n')))
 
 	G = nx.MultiGraph()
 

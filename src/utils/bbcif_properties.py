@@ -9,6 +9,73 @@ PT = ['H' , 'He', 'Li', 'Be', 'B' , 'C' , 'N' , 'O' , 'F' , 'Ne', 'Na', 'Mg', 'A
 	  'Ra', 'La', 'Ce', 'Pr', 'Nd', 'Pm', 'Sm', 'Eu', 'Gd', 'Tb', 'Dy', 'Ho', 'Er', 'Tm', 'Yb', 'Lu', 'Ac', 'Th', 
 	  'Pa', 'U' , 'Np', 'Pu', 'Am', 'Cm', 'Bk', 'Cf', 'Es', 'Fm', 'Md', 'No', 'Lr', 'FG', 'X' ]
 
+
+def _load_cif_content(cifname, direc):
+	"""
+	Helper function to load CIF content from JSON database or file.
+	
+	Args:
+		cifname: CIF filename
+		direc: Directory type ('nodes', 'edges', or 'templates') or full path
+	
+	Returns:
+		str: CIF file content
+	"""
+	from src.utils.paths import get_node_path, get_edge_path, get_template_path, NODES_DIR, EDGES_DIR, TEMPLATES_DIR
+	from src.utils.input_loader import load_building_blocks
+	
+	# Normalize direc parameter - convert path to type
+	direc_str = str(direc)
+	if 'nodes' in direc_str.lower():
+		direc_type = 'nodes'
+	elif 'edges' in direc_str.lower():
+		direc_type = 'edges'
+	elif 'templates' in direc_str.lower():
+		direc_type = 'templates'
+	else:
+		direc_type = direc
+	
+	# Try to load from JSON database first
+	cif_content = None
+	try:
+		if direc_type == 'nodes':
+			blocks = load_building_blocks(cifname, 'node', source='auto')
+		elif direc_type == 'edges':
+			blocks = load_building_blocks(cifname, 'edge', source='auto')
+		elif direc_type == 'templates':
+			blocks = load_building_blocks(cifname, 'template', source='auto')
+		else:
+			# For custom paths, skip JSON loading
+			blocks = None
+		
+		if blocks:
+			# Normalize filename
+			if not cifname.endswith('.cif'):
+				cifname_with_ext = f"{cifname}.cif"
+			else:
+				cifname_with_ext = cifname
+			cif_content = blocks.get(cifname_with_ext)
+	except Exception:
+		pass
+	
+	# Fallback to direct file reading if JSON loading failed
+	if cif_content is None:
+		if direc_type == 'nodes':
+			path = get_node_path(cifname)
+		elif direc_type == 'edges':
+			path = get_edge_path(cifname)
+		elif direc_type == 'templates':
+			path = get_template_path(cifname)
+		else:
+			# Assume it's a full path or relative path
+			path = os.path.join(direc, cifname)
+		
+		with open(path, 'r') as cif:
+			cif_content = cif.read()
+	
+	return cif_content
+
+
 def nn(string):
 	return re.sub('[^a-zA-Z]','', string)
 
@@ -70,7 +137,7 @@ def PBC3DF(c1, c2):
 
 def bbelems(cifname, direc):
 	"""
-	Get elements from building block CIF file.
+	Get elements from building block CIF file or JSON database.
 	
 	Args:
 		cifname: CIF filename
@@ -79,23 +146,9 @@ def bbelems(cifname, direc):
 	Returns:
 		list: List of element symbols
 	"""
-	# Import path resolution functions
-	from src.utils.paths import get_node_path, get_edge_path, get_template_path
-	
-	# Determine if direc is a directory type or a full path
-	if direc == 'nodes':
-		path = get_node_path(cifname)
-	elif direc == 'edges':
-		path = get_edge_path(cifname)
-	elif direc == 'templates':
-		path = get_template_path(cifname)
-	else:
-		# Assume it's a full path or relative path
-		path = os.path.join(direc, cifname)
-
-	with open(path, 'r') as cif:
-		cif = cif.read()
-		cif = filter(None, cif.split('\n'))
+	# Load CIF content from JSON database or file
+	cif_content = _load_cif_content(cifname, direc)
+	cif = filter(None, cif_content.split('\n'))
 
 	elems = []
 	elems_append = elems.append
@@ -129,23 +182,9 @@ def bb2array(cifname, direc):
 	Returns:
 		tuple: (fcoords, unit_cell) where fcoords is list of [atom_name, fractional_coords]
 	"""
-	# Import path resolution functions
-	from src.utils.paths import get_node_path, get_edge_path, get_template_path
-	
-	# Determine if direc is a directory type or a full path
-	if direc == 'nodes':
-		path = get_node_path(cifname)
-	elif direc == 'edges':
-		path = get_edge_path(cifname)
-	elif direc == 'templates':
-		path = get_template_path(cifname)
-	else:
-		# Assume it's a full path or relative path
-		path = os.path.join(direc, cifname)
-
-	with open(path, 'r') as cif:
-		cif = cif.read()
-		cif = filter(None, cif.split('\n'))
+	# Load CIF content from JSON database or file
+	cif_content = _load_cif_content(cifname, direc)
+	cif = filter(None, cif_content.split('\n'))
 
 	fcoords = []
 	fcoords_append = fcoords.append
@@ -199,23 +238,20 @@ def bbbonds(cifname, direc):
 	Returns:
 		list: List of bond information
 	"""
-	# Import path resolution functions
-	from src.utils.paths import get_node_path, get_edge_path, get_template_path
+def bbbonds(cifname, direc):
+	"""
+	Get bonds from building block CIF file or JSON database.
 	
-	# Determine if direc is a directory type or a full path
-	if direc == 'nodes':
-		path = get_node_path(cifname)
-	elif direc == 'edges':
-		path = get_edge_path(cifname)
-	elif direc == 'templates':
-		path = get_template_path(cifname)
-	else:
-		# Assume it's a full path or relative path
-		path = os.path.join(direc, cifname)
-
-	with open(path, 'r') as cif:
-		cif = cif.read()
-		cif = filter(None, cif.split('\n'))
+	Args:
+		cifname: CIF filename
+		direc: Directory type ('nodes', 'edges', or 'templates') or full path
+	
+	Returns:
+		list: List of bond information
+	"""
+	# Load CIF content from JSON database or file
+	cif_content = _load_cif_content(cifname, direc)
+	cif = filter(None, cif_content.split('\n'))
 
 	bonds = []
 	bonds_append = bonds.append
@@ -228,7 +264,7 @@ def bbbonds(cifname, direc):
 
 def X_vecs(cifname, direc, label):
 	"""
-	Get X vectors from building block CIF file.
+	Get X vectors from building block CIF file or JSON database.
 	
 	Args:
 		cifname: CIF filename
@@ -238,23 +274,9 @@ def X_vecs(cifname, direc, label):
 	Returns:
 		list: List of shifted coordinate vectors
 	"""
-	# Import path resolution functions
-	from src.utils.paths import get_node_path, get_edge_path, get_template_path
-	
-	# Determine if direc is a directory type or a full path
-	if direc == 'nodes':
-		path = get_node_path(cifname)
-	elif direc == 'edges':
-		path = get_edge_path(cifname)
-	elif direc == 'templates':
-		path = get_template_path(cifname)
-	else:
-		# Assume it's a full path or relative path
-		path = os.path.join(direc, cifname)
-
-	with open(path, 'r') as cif:
-		cif = cif.read()
-		cif = filter(None, cif.split('\n'))
+	# Load CIF content from JSON database or file
+	cif_content = _load_cif_content(cifname, direc)
+	cif = filter(None, cif_content.split('\n'))
 
 	fcoords = []
 	fcoords_append = fcoords.append
@@ -314,23 +336,9 @@ def bbcharges(cifname, direc):
 	Returns:
 		tuple: (charges, elements) lists
 	"""
-	# Import path resolution functions
-	from src.utils.paths import get_node_path, get_edge_path, get_template_path
-	
-	# Determine if direc is a directory type or a full path
-	if direc == 'nodes':
-		path = get_node_path(cifname)
-	elif direc == 'edges':
-		path = get_edge_path(cifname)
-	elif direc == 'templates':
-		path = get_template_path(cifname)
-	else:
-		# Assume it's a full path or relative path
-		path = os.path.join(direc, cifname)
-
-	with open(path, 'r') as cif:
-		cif = cif.read()
-		cif = filter(None, cif.split('\n'))
+	# Load CIF content from JSON database or file
+	cif_content = _load_cif_content(cifname, direc)
+	cif = filter(None, cif_content.split('\n'))
 
 	charges = []
 	charges_append = charges.append
@@ -346,7 +354,7 @@ def bbcharges(cifname, direc):
 
 def calc_edge_len(cifname, direc):
 	"""
-	Calculate edge length from CIF file.
+	Calculate edge length from CIF file or JSON database.
 	
 	Args:
 		cifname: CIF filename
@@ -355,23 +363,9 @@ def calc_edge_len(cifname, direc):
 	Returns:
 		float: Edge length
 	"""
-	# Import path resolution functions
-	from src.utils.paths import get_node_path, get_edge_path, get_template_path
-	
-	# Determine if direc is a directory type or a full path
-	if direc == 'nodes':
-		path = get_node_path(cifname)
-	elif direc == 'edges':
-		path = get_edge_path(cifname)
-	elif direc == 'templates':
-		path = get_template_path(cifname)
-	else:
-		# Assume it's a full path or relative path
-		path = os.path.join(direc, cifname)
-
-	with open(path, 'r') as cif:
-		cif = cif.read()
-		cif = filter(None, cif.split('\n'))
+	# Load CIF content from JSON database or file
+	cif_content = _load_cif_content(cifname, direc)
+	cif = filter(None, cif_content.split('\n'))
 
 	fcoords = []
 	fcoords_append = fcoords.append
@@ -413,7 +407,7 @@ def calc_edge_len(cifname, direc):
 
 def cncalc(cifname, direc):
 	"""
-	Calculate coordination number from CIF file.
+	Calculate coordination number from CIF file or JSON database.
 	
 	Args:
 		cifname: CIF filename
@@ -422,23 +416,50 @@ def cncalc(cifname, direc):
 	Returns:
 		int: Coordination number (count of 'X' atoms)
 	"""
-	# Import path resolution functions
+	# Import path resolution functions and loader
 	from src.utils.paths import get_node_path, get_edge_path, get_template_path
+	from src.utils.input_loader import load_building_blocks
 	
-	# Determine if direc is a directory type or a full path
-	if direc == 'nodes':
-		path = get_node_path(cifname)
-	elif direc == 'edges':
-		path = get_edge_path(cifname)
-	elif direc == 'templates':
-		path = get_template_path(cifname)
-	else:
-		# Assume it's a full path or relative path
-		path = os.path.join(direc, cifname)
-
-	with open(path, 'r') as cif:
-		cif = cif.read()
-		cif = filter(None, cif.split('\n'))
+	# Try to load from JSON database first
+	cif_content = None
+	try:
+		if direc == 'nodes':
+			blocks = load_building_blocks(cifname, 'node', source='auto')
+		elif direc == 'edges':
+			blocks = load_building_blocks(cifname, 'edge', source='auto')
+		elif direc == 'templates':
+			blocks = load_building_blocks(cifname, 'template', source='auto')
+		else:
+			# For custom paths, try direct file reading
+			blocks = None
+		
+		if blocks:
+			# Normalize filename
+			if not cifname.endswith('.cif'):
+				cifname_with_ext = f"{cifname}.cif"
+			else:
+				cifname_with_ext = cifname
+			cif_content = blocks.get(cifname_with_ext)
+	except Exception:
+		pass
+	
+	# Fallback to direct file reading if JSON loading failed
+	if cif_content is None:
+		if direc == 'nodes':
+			path = get_node_path(cifname)
+		elif direc == 'edges':
+			path = get_edge_path(cifname)
+		elif direc == 'templates':
+			path = get_template_path(cifname)
+		else:
+			# Assume it's a full path or relative path
+			path = os.path.join(direc, cifname)
+		
+		with open(path, 'r') as cif:
+			cif_content = cif.read()
+	
+	# Parse CIF content
+	cif = filter(None, cif_content.split('\n'))
 	
 	cn = 0
 	nc = 0

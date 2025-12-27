@@ -30,14 +30,13 @@ print("=" * 70)
 
 # Step 1: Choose your components
 # ─────────────────────────────────────────────────────────────────────────
-# Components are loaded from the inputs/ directory:
-#   - inputs/templates/acsh.cif
-#   - inputs/nodes/12c_Ce_1_Ch.cif
-#   - inputs/edges/1B_1TrU.cif
-# Or from JSON databases in data/ directory
+# Components are loaded from the JSON database in data/ directory:
+#   - data/template_database.json
+#   - data/nodes_database.json
+#   - data/edges_database.json
 
-template = "acsh"           # Topology template
-node = "12c_Ce_1_Ch"        # Node building block
+template = "pcu"            # Topology template (6-connected)
+node = "6c_Cu_1_Ch"         # Node building block (6-connected, compatible with pcu)
 edge = "1B_1TrU"            # Edge building block
 
 print(f"\n📋 Components:")
