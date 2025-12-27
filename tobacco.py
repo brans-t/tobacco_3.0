@@ -1,17 +1,18 @@
 from __future__ import print_function
-from ciftemplate2graph import ct2g
-from vertex_edge_assign import vertex_assign, assign_node_vecs2edges
-from cycle_cocyle import cycle_cocyle, Bstar_alpha
-from bbcif_properties import cncalc, bbelems
-from SBU_geometry import SBU_coords
-from scale import scale
-from scaled_embedding2coords import omega2coords
-from place_bbs import scaled_node_and_edge_vectors, place_nodes, place_edges
-from remove_net_charge import fix_charges
-from remove_dummy_atoms import remove_Fr
-from adjust_edges import adjust_edges
-from write_cifs import write_check_cif, write_cif, bond_connected_components, distance_search_bond, fix_bond_sym, merge_catenated_cifs
-from scale_animation import scaling_callback_animation, write_scaling_callback_animation, animate_objective_minimization
+from src.core.ciftemplate2graph import ct2g
+from src.core.vertex_edge_assign import vertex_assign, assign_node_vecs2edges
+from src.core.cycle_cocyle import cycle_cocyle, Bstar_alpha
+from src.utils.bbcif_properties import cncalc, bbelems
+from src.core.SBU_geometry import SBU_coords
+from src.core.scale import scale
+from src.core.scaled_embedding2coords import omega2coords
+from src.utils.place_bbs import scaled_node_and_edge_vectors, place_nodes, place_edges
+from src.utils.remove_net_charge import fix_charges
+from src.utils.remove_dummy_atoms import remove_Fr
+from src.utils.adjust_edges import adjust_edges
+from src.utils.write_cifs import write_check_cif, write_cif, bond_connected_components, distance_search_bond, fix_bond_sym, merge_catenated_cifs
+from src.visualization.scale_animation import scaling_callback_animation, write_scaling_callback_animation, animate_objective_minimization
+from src.utils.paths import NODES_DIR, EDGES_DIR, TEMPLATES_DIR, OUTPUT_CIFS_DIR, ensure_directories
 
 import configuration
 import os
@@ -89,7 +90,7 @@ def run_template(template):
 		TVT = sorted(TVT, key=lambda x:x[0], reverse=True)
 		TET = sorted(TET, reverse=True)
 
-		node_cns = [(cncalc(node, 'nodes'), node) for node in os.listdir('nodes')]
+		node_cns = [(cncalc(node, 'nodes'), node) for node in os.listdir(NODES_DIR)]
 
 		print('Number of vertices = ', len(TG.nodes()))
 		print('Number of edges = ', len(TG.edges()))
@@ -162,9 +163,9 @@ def run_template(template):
 		num_vertices = len(TG.nodes())
 	
 		if COMBINATORIAL_EDGE_ASSIGNMENT:
-			eas = list(itertools.product([e for e in os.listdir('edges')], repeat = len(TET)))
+			eas = list(itertools.product([e for e in os.listdir(EDGES_DIR)], repeat = len(TET)))
 		else:
-			edge_files = sorted([e for e in os.listdir('edges')])
+			edge_files = sorted([e for e in os.listdir(EDGES_DIR)])
 			eas = []
 			i = 0
 			while len(eas) < len(TET):
@@ -372,7 +373,7 @@ def run_template(template):
 	if catenation and MERGE_CATENATED_NETS:
 		
 		print('merging catenated cifs...')
-		cat_cifs = glob.glob('output_cifs/*_CAT*.cif')
+		cat_cifs = glob.glob(str(OUTPUT_CIFS_DIR / '*_CAT*.cif'))
 
 		for comb in itertools.combinations(cat_cifs, cat_count):
 
@@ -421,13 +422,16 @@ if __name__ == '__main__':
 
 	start_time = time.time()
 	
-	for d in ['templates', 'nodes', 'edges']:
+	# Ensure output directories exist
+	ensure_directories()
+	
+	for d in [TEMPLATES_DIR, NODES_DIR, EDGES_DIR]:
 		try:
 			os.remove(os.path.join(d,'.DS_Store'))
 		except:
 			pass
 	
-	templates = sorted(os.listdir('templates'))
+	templates = sorted(os.listdir(TEMPLATES_DIR))
 
 	if RUN_PARALLEL:
 		run_tobacco_parallel(templates, CHARGES)
